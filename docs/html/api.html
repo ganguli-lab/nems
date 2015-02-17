@@ -1,0 +1,272 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>API Reference &mdash; nems 0.1 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="top" title="nems 0.1 documentation" href="index.html"/>
+        <link rel="next" title="Changelog" href="changelog.html"/>
+        <link rel="prev" title="Quickstart" href="quickstart.html"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        <a href="index.html" class="fa fa-home"> nems</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+        
+            <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="install.html#basic">Basic</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#bugs">Bugs</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-tentbasis">tentbasis</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
+</ul>
+
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">nems</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>API Reference</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          <a href="_sources/api.txt" rel="nofollow"> View page source</a>
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            
+  <div class="section" id="api-reference">
+<h1>API Reference<a class="headerlink" href="#api-reference" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-tentbasis">
+<span id="tentbasis"></span><h2>tentbasis<a class="headerlink" href="#module-tentbasis" title="Permalink to this headline">¶</a></h2>
+<p>Functions for generating and evaluating functions and gradients
+composed of linear combinations of tent basis functions.</p>
+<p>This module allows you to:</p>
+<ul>
+<li><p class="first">Generate tent functions spanning an input range (either Gaussian or Linear tents)</p>
+</li>
+<li><dl class="first docutils">
+<dt>Generate a matrix where the ith column is the value of either the tent function</dt>
+<dd><p class="first last">phi(x-i) or its derivative phi&#8217;(x-i) for an input vector x.</p>
+</dd>
+</dl>
+</li>
+</ul>
+<div class="section" id="notes">
+<h3>Notes<a class="headerlink" href="#notes" title="Permalink to this headline">¶</a></h3>
+<p>These have the following functional form:</p>
+<div class="math">
+\[f(x) = \sum_i w_i \phi(x-i)\]</div>
+<p>where each tent function phi is a _fixed_ basis function, shifted
+along the input dimension to tile the input space. The function f(x)
+is parameterized as a linear combination (with weights given by lpha)
+of these tent functions.</p>
+<dl class="function">
+<dt id="tentbasis.build_tents">
+<tt class="descclassname">tentbasis.</tt><tt class="descname">build_tents</tt><big>(</big><em>num_tent_samples</em>, <em>tent_span</em>, <em>num_tents</em>, <em>tent_type='gaussian'</em>, <em>sigmasq=0.2</em><big>)</big><a class="reference internal" href="_modules/tentbasis.html#build_tents"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tentbasis.build_tents" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize tent basis functions
+(used to parameterize nonlinearities)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">tentparams          &#8211; a dictionary containing a bunch of tent basis function parameters:</p>
+<blockquote class="last">
+<div><p>num_tent_samples, tent_span, num_tents, tent_type, sigmasq (only used for Gaussian tents),
+Phi (a matrix whose columns are the basis functions), and centers (an array of tent centers)</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="tentbasis.eval_basis">
+<tt class="descclassname">tentbasis.</tt><tt class="descname">eval_basis</tt><big>(</big><em>u</em>, <em>x</em>, <em>Phi</em>, <em>PhiGrad</em><big>)</big><a class="reference internal" href="_modules/tentbasis.html#eval_basis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tentbasis.eval_basis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Evaluates a function composed of basis functions given by vectors Phi,
+and derivatives given by vectors PhiGrad.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">z       &#8211; the input (u) evaluated at each basis function</p>
+<p class="last">zgrad   &#8211; the input (u) evaluated at each basis function derivative</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="tentbasis.eval_tents">
+<tt class="descclassname">tentbasis.</tt><tt class="descname">eval_tents</tt><big>(</big><em>u</em>, <em>tentparams</em><big>)</big><a class="reference internal" href="_modules/tentbasis.html#eval_tents"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tentbasis.eval_tents" title="Permalink to this definition">¶</a></dt>
+<dd><p>Evaluate basis functions and derivative at given input value</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">z, zgrad    &#8211;</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="tentbasis.make_rcos_basis">
+<tt class="descclassname">tentbasis.</tt><tt class="descname">make_rcos_basis</tt><big>(</big><em>tau</em>, <em>numBases</em>, <em>bias=0.2</em><big>)</big><a class="reference internal" href="_modules/tentbasis.html#make_rcos_basis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tentbasis.make_rcos_basis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Makes a raised cosine bases (useful for projecting temporal filters)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Phi       &#8211; the generated basis vectors</p>
+<p class="last">PhiOrth   &#8211; the same basis vectors, but orthogonalized</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="changelog.html" class="btn btn-neutral float-right" title="Changelog"/>Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="quickstart.html" class="btn btn-neutral" title="Quickstart"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Niru Maheswaranathan.
+    </p>
+  </div>
+
+  <a href="https://github.com/snide/sphinx_rtd_theme">Sphinx theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

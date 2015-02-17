@@ -1,0 +1,574 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>tentbasis &mdash; nems 0.1 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="top" title="nems 0.1 documentation" href="../index.html"/>
+        <link rel="up" title="Module code" href="index.html"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        <a href="../index.html" class="fa fa-home"> nems</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+        
+            <ul>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../install.html#basic">Basic</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../quickstart.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../quickstart.html#bugs">Bugs</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-tentbasis">tentbasis</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+</ul>
+
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">nems</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="index.html">Module code</a> &raquo;</li>
+      
+    <li>tentbasis</li>
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            
+  <h1>Source code for tentbasis</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Functions for generating and evaluating functions and gradients</span>
+<span class="sd">composed of linear combinations of tent basis functions.</span>
+
+<span class="sd">This module allows you to:</span>
+
+<span class="sd">- Generate tent functions spanning an input range (either Gaussian or Linear tents)</span>
+<span class="sd">- Generate a matrix where the ith column is the value of either the tent function</span>
+<span class="sd">    \phi(x-i) or its derivative \phi&#39;(x-i) for an input vector x.</span>
+
+<span class="sd">Notes</span>
+<span class="sd">-----</span>
+<span class="sd">These have the following functional form:</span>
+
+<span class="sd">.. math:: f(x) = \sum_i w_i \phi(x-i)</span>
+
+<span class="sd">where each tent function \phi is a _fixed_ basis function, shifted</span>
+<span class="sd">along the input dimension to tile the input space. The function f(x)</span>
+<span class="sd">is parameterized as a linear combination (with weights given by \alpha)</span>
+<span class="sd">of these tent functions.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<div class="viewcode-block" id="build_tents"><a class="viewcode-back" href="../api.html#tentbasis.build_tents">[docs]</a><span class="k">def</span> <span class="nf">build_tents</span><span class="p">(</span><span class="n">num_tent_samples</span><span class="p">,</span> <span class="n">tent_span</span><span class="p">,</span> <span class="n">num_tents</span><span class="p">,</span> <span class="n">tent_type</span><span class="o">=</span><span class="s">&#39;gaussian&#39;</span><span class="p">,</span> <span class="n">sigmasq</span><span class="o">=</span><span class="mf">0.2</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Initialize tent basis functions</span>
+<span class="sd">    (used to parameterize nonlinearities)</span>
+
+<span class="sd">    Arguments</span>
+<span class="sd">    ---------</span>
+<span class="sd">    num_tent_samples    -- number of samples for the input range (tent_x)</span>
+<span class="sd">    tent_span           -- tuple designating the input range e.g. (min, max)</span>
+<span class="sd">    num_tents           -- number of tent basis functions to use</span>
+<span class="sd">    tent_type           -- shape of the basis functions (defaults to &#39;gaussian&#39;. other option: &#39;linear&#39;)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tentparams          -- a dictionary containing a bunch of tent basis function parameters:</span>
+<span class="sd">                            num_tent_samples, tent_span, num_tents, tent_type, sigmasq (only used for Gaussian tents),</span>
+<span class="sd">                            Phi (a matrix whose columns are the basis functions), and centers (an array of tent centers)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c"># store tent basis function parameters in a dictionary</span>
+    <span class="n">tentparams</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;num_tent_samples&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">num_tent_samples</span>
+    <span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;tent_span&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tent_span</span>
+    <span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;num_tents&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">num_tents</span>
+    <span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;type&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tent_type</span>
+    <span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;sigmasq&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sigmasq</span>
+
+    <span class="c"># initialize x-axis for basis functions</span>
+    <span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;tent_x&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">tent_span</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">tent_span</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">num_tent_samples</span><span class="p">)</span>
+
+    <span class="c"># build tent basis functions</span>
+    <span class="k">if</span> <span class="nb">str</span><span class="o">.</span><span class="n">lower</span><span class="p">(</span><span class="n">tent_type</span><span class="p">)</span> <span class="o">==</span> <span class="s">&#39;gaussian&#39;</span><span class="p">:</span>
+        <span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;Phi&#39;</span><span class="p">],</span> <span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;centers&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_make_gaussian_basis</span><span class="p">(</span><span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;tent_x&#39;</span><span class="p">],</span> <span class="n">num_tents</span><span class="p">,</span> <span class="n">sigmasq</span><span class="o">=</span><span class="n">sigmasq</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">str</span><span class="o">.</span><span class="n">lower</span><span class="p">(</span><span class="n">tent_type</span><span class="p">)</span> <span class="o">==</span> <span class="s">&#39;linear&#39;</span><span class="p">:</span>
+        <span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;Phi&#39;</span><span class="p">],</span> <span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;centers&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_make_linear_basis</span><span class="p">(</span><span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;tent_x&#39;</span><span class="p">],</span> <span class="n">num_tents</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">str</span><span class="o">.</span><span class="n">lower</span><span class="p">(</span><span class="n">tent_type</span><span class="p">)</span> <span class="o">==</span> <span class="s">&#39;ispline&#39;</span><span class="p">:</span>
+        <span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;Phi&#39;</span><span class="p">],</span> <span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;centers&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_make_ispline_basis</span><span class="p">(</span><span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;tent_x&#39;</span><span class="p">],</span> <span class="n">num_tents</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Could not parse tent type &#39;</span> <span class="o">+</span> <span class="n">tent_type</span><span class="p">)</span>
+
+    <span class="c"># return tent function parameters</span>
+    <span class="k">return</span> <span class="n">tentparams</span>
+</div>
+<div class="viewcode-block" id="eval_tents"><a class="viewcode-back" href="../api.html#tentbasis.eval_tents">[docs]</a><span class="k">def</span> <span class="nf">eval_tents</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">tentparams</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Evaluate basis functions and derivative at given input value</span>
+
+<span class="sd">    Arguments</span>
+<span class="sd">    ---------</span>
+<span class="sd">    u           -- input to evaluate</span>
+<span class="sd">    tentparams  -- parameters used to specify the tent basis functions (e.g. returned by build_tents)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    z, zgrad    --</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">str</span><span class="o">.</span><span class="n">lower</span><span class="p">(</span><span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;type&#39;</span><span class="p">])</span> <span class="o">==</span> <span class="s">&#39;gaussian&#39;</span><span class="p">:</span>
+        <span class="n">z</span><span class="p">,</span> <span class="n">zgrad</span> <span class="o">=</span> <span class="n">_eval_gaussian_basis</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;centers&#39;</span><span class="p">],</span> <span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;sigmasq&#39;</span><span class="p">])</span>
+    <span class="k">elif</span> <span class="nb">str</span><span class="o">.</span><span class="n">lower</span><span class="p">(</span><span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;type&#39;</span><span class="p">])</span> <span class="o">==</span> <span class="s">&#39;linear&#39;</span><span class="p">:</span>
+        <span class="n">z</span><span class="p">,</span> <span class="n">zgrad</span> <span class="o">=</span> <span class="n">_eval_linear_basis</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;centers&#39;</span><span class="p">])</span>
+    <span class="k">elif</span> <span class="nb">str</span><span class="o">.</span><span class="n">lower</span><span class="p">(</span><span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;type&#39;</span><span class="p">])</span> <span class="o">==</span> <span class="s">&#39;ispline&#39;</span><span class="p">:</span>
+        <span class="n">z</span><span class="p">,</span> <span class="n">zgrad</span> <span class="o">=</span> <span class="n">_eval_ispline_basis</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;centers&#39;</span><span class="p">],</span> <span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;num_tents&#39;</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Could not parse tent type &#39;</span> <span class="o">+</span> <span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;type&#39;</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">z</span><span class="p">,</span> <span class="n">zgrad</span>
+</div>
+<span class="k">def</span> <span class="nf">_make_ispline_basis</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">numBases</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">limits</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generate a basis of piecewise linear functions</span>
+
+<span class="sd">    Arguments</span>
+<span class="sd">    ---------</span>
+<span class="sd">    x           -- a vector spanning an input range. e.g. x = np.linspace(-5,5,1e3)</span>
+<span class="sd">    numBases    -- the number of tent basis functions to generate</span>
+<span class="sd">    order       -- order of the mspline</span>
+<span class="sd">    limits      -- an optional tuple which sets the range of the tent functions. Defaults to (x[0], x[-1])</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Phi         -- a matrix consisting of columns that are the I-splines over the input range</span>
+<span class="sd">    centers     -- parameters needed to specify this exact set of tent functions (used by _eval_ispline_basis)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">limits</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">limits</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]])</span>
+
+    <span class="c"># knot centers</span>
+    <span class="n">centers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">limits</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">limits</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">numBases</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">order</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&#39;edge&#39;</span><span class="p">)</span>
+    <span class="n">centers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">centers</span><span class="p">,</span> <span class="p">[</span><span class="n">centers</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span><span class="o">*</span><span class="mi">5</span><span class="p">]</span>
+
+    <span class="c"># build basis functions</span>
+    <span class="n">Phi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">_ispline</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">centers</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">idx</span><span class="p">)</span> <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">numBases</span><span class="p">)])</span><span class="o">.</span><span class="n">T</span>
+
+    <span class="k">return</span> <span class="n">Phi</span><span class="p">,</span> <span class="n">centers</span>
+
+<span class="k">def</span> <span class="nf">_eval_ispline_basis</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">centers</span><span class="p">,</span> <span class="n">numBases</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Evaluates i-spline basis functions and derivatives at given values</span>
+
+<span class="sd">    Arguments</span>
+<span class="sd">    ---------</span>
+<span class="sd">    x        -- the input values at which to evaluate the basis functions</span>
+<span class="sd">    centers  -- centers used to generate the basis (from _make_ispline_basis)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Phi      -- each of the basis functions evaluated at the locations in x</span>
+<span class="sd">    PhiGrad  -- derivative of each basis functions evaluated at the locations in x</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">xr</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+    <span class="n">Phi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">_ispline</span><span class="p">(</span><span class="n">xr</span><span class="p">,</span> <span class="n">centers</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">idx</span><span class="p">)</span> <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">numBases</span><span class="p">)])</span><span class="o">.</span><span class="n">T</span>
+    <span class="n">PhiGrad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">_mspline</span><span class="p">(</span><span class="n">xr</span><span class="p">,</span> <span class="n">centers</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">idx</span><span class="p">)</span> <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">numBases</span><span class="p">)])</span><span class="o">.</span><span class="n">T</span>
+
+    <span class="k">return</span> <span class="n">Phi</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,)),</span> <span class="n">PhiGrad</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,))</span>
+
+<span class="k">def</span> <span class="nf">_make_linear_basis</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">numBases</span><span class="p">,</span> <span class="n">limits</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generate a basis of piecewise linear functions</span>
+
+<span class="sd">    Arguments</span>
+<span class="sd">    ---------</span>
+<span class="sd">    x           -- a vector spanning an input range. e.g. x = np.linspace(-5,5,1e3)</span>
+<span class="sd">    numBases    -- the number of tent basis functions to generate</span>
+<span class="sd">    limits      -- an optional tuple which sets the range of the tent functions. Defaults to (x[0], x[-1])</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Phi         -- a matrix consisting of columns that are the tent functions over the input range</span>
+<span class="sd">    centers     -- parameters needed to specify this exact set of tent functions (used by _eval_linear_basis)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">limits</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">limits</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]])</span>
+
+    <span class="c"># centers of the basis functions</span>
+    <span class="n">centers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">limits</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">limits</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">numBases</span><span class="p">)</span>
+
+    <span class="c"># build basis functions</span>
+    <span class="n">dim</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">size</span>
+    <span class="n">Phi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">dim</span><span class="p">,</span> <span class="n">numBases</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">numBases</span><span class="p">):</span>
+
+        <span class="c"># left leg of the tent</span>
+        <span class="k">if</span> <span class="n">j</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">il</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">((</span> <span class="p">(</span><span class="n">x</span> <span class="o">&gt;=</span> <span class="n">centers</span><span class="p">[</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">x</span> <span class="o">&lt;=</span> <span class="n">centers</span><span class="p">[</span><span class="n">j</span><span class="p">])</span> <span class="p">))</span>
+            <span class="n">Phi</span><span class="p">[</span><span class="n">il</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">+=</span> <span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">il</span><span class="p">]</span><span class="o">-</span><span class="n">centers</span><span class="p">[</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span><span class="n">centers</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">-</span> <span class="n">centers</span><span class="p">[</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="c"># right leg of the tent</span>
+        <span class="k">if</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">numBases</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">ir</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">((</span> <span class="p">(</span><span class="n">x</span> <span class="o">&gt;=</span> <span class="n">centers</span><span class="p">[</span><span class="n">j</span><span class="p">])</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">x</span> <span class="o">&lt;=</span> <span class="n">centers</span><span class="p">[</span><span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span> <span class="p">))</span>
+            <span class="n">Phi</span><span class="p">[</span><span class="n">ir</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">+=</span> <span class="p">(</span><span class="n">centers</span><span class="p">[</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">x</span><span class="p">[</span><span class="n">ir</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span><span class="n">centers</span><span class="p">[</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">centers</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">Phi</span><span class="p">,</span> <span class="n">centers</span>
+
+<span class="k">def</span> <span class="nf">_eval_linear_basis</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">centers</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Evaluates gaussian basis functions and derivatives at given values</span>
+
+<span class="sd">    Arguments</span>
+<span class="sd">    ---------</span>
+<span class="sd">    x        -- the input values at which to evaluate the basis functions</span>
+<span class="sd">    centers  -- centers used to generate the basis (from _make_linear_basis)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Phi      -- each of the basis functions evaluated at the locations in x</span>
+<span class="sd">    PhiGrad  -- derivative of each basis functions evaluated at the locations in x</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">Phi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">centers</span><span class="o">.</span><span class="n">size</span><span class="p">))</span>
+    <span class="n">PhiGrad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">Phi</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="n">xr</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">centers</span><span class="o">.</span><span class="n">size</span><span class="p">):</span>
+
+        <span class="c"># left leg of the tent</span>
+        <span class="k">if</span> <span class="n">j</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">il</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">((</span> <span class="p">(</span><span class="n">xr</span> <span class="o">&gt;=</span> <span class="n">centers</span><span class="p">[</span><span class="n">j</span> <span class="o">-</span> <span class="mi">1</span><span class="p">])</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">xr</span> <span class="o">&lt;=</span> <span class="n">centers</span><span class="p">[</span><span class="n">j</span><span class="p">])</span> <span class="p">))</span>
+            <span class="n">Phi</span><span class="p">[</span><span class="n">il</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">+=</span> <span class="p">(</span><span class="n">xr</span><span class="p">[</span><span class="n">il</span><span class="p">]</span> <span class="o">-</span> <span class="n">centers</span><span class="p">[</span><span class="n">j</span> <span class="o">-</span> <span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span><span class="n">centers</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">-</span> <span class="n">centers</span><span class="p">[</span><span class="n">j</span> <span class="o">-</span> <span class="mi">1</span><span class="p">])</span>
+            <span class="n">PhiGrad</span><span class="p">[</span><span class="n">il</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="c"># right leg of the tent</span>
+        <span class="k">if</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">centers</span><span class="o">.</span><span class="n">size</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">ir</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">((</span> <span class="p">(</span><span class="n">xr</span> <span class="o">&gt;=</span> <span class="n">centers</span><span class="p">[</span><span class="n">j</span><span class="p">])</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">xr</span> <span class="o">&lt;=</span> <span class="n">centers</span><span class="p">[</span><span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span> <span class="p">))</span>
+            <span class="n">Phi</span><span class="p">[</span><span class="n">ir</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">+=</span> <span class="p">(</span><span class="n">centers</span><span class="p">[</span><span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">xr</span><span class="p">[</span><span class="n">ir</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span><span class="n">centers</span><span class="p">[</span><span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">centers</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
+            <span class="n">PhiGrad</span><span class="p">[</span><span class="n">ir</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">+=</span> <span class="o">-</span><span class="mi">1</span>
+
+    <span class="k">return</span> <span class="n">Phi</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,)),</span> <span class="n">PhiGrad</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,))</span>  <span class="c"># , PhiGrad2</span>
+
+<span class="k">def</span> <span class="nf">_make_gaussian_basis</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">numBases</span><span class="p">,</span> <span class="n">sigmasq</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">limits</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generates a basis of Gaussian tent functions</span>
+
+<span class="sd">    Arguments</span>
+<span class="sd">    ---------</span>
+<span class="sd">    x           -- a vectors spanning an input range. e.g. x = np.linspace(-5,5,1e3)</span>
+<span class="sd">    numBases    -- the number of tent basis functions to generate</span>
+<span class="sd">    sigmasq     -- std. dev. of the gaussian tents (default is 0.2)</span>
+<span class="sd">    limits      -- an optional tuple which sets the range of the tent functions. Defaults to (x[0], x[-1])</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Phi         -- the generated basis vectors (each basis vector is a column of Phi)</span>
+<span class="sd">    params      -- tuple of parameters (centers, sigmasq) used to generate the basis (useful for _eval_gaussian_basis)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">limits</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">limits</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]])</span>
+
+    <span class="c"># centers of the basis functions</span>
+    <span class="n">centers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">limits</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">limits</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">numBases</span><span class="p">)</span>
+
+    <span class="c"># build basis functions</span>
+    <span class="n">dim</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">size</span>
+    <span class="n">Phi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">dim</span><span class="p">,</span><span class="n">numBases</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">numBases</span><span class="p">):</span>
+        <span class="n">Phi</span><span class="p">[:,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span> <span class="o">-</span><span class="mf">0.5</span><span class="o">*</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">centers</span><span class="p">[</span><span class="n">j</span><span class="p">])</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="n">sigmasq</span> <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Phi</span><span class="p">,</span> <span class="n">centers</span>
+
+<span class="k">def</span> <span class="nf">_eval_gaussian_basis</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">centers</span><span class="p">,</span> <span class="n">sigmasq</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Evaluates gaussian basis functions and derivatives at given values</span>
+
+<span class="sd">    Arguments</span>
+<span class="sd">    ---------</span>
+<span class="sd">    x        -- the input values at which to evaluate the basis functions</span>
+<span class="sd">    centers  -- array of centers used to generate the basis (from _make_gaussian_basis)</span>
+<span class="sd">    sigmasq  -- the width (std. dev. of each basis function)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Phi      -- each of the basis functions evaluated at the locations in x</span>
+<span class="sd">    PhiGrad  -- derivative of each basis functions evaluated at the locations in x</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">Phi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">centers</span><span class="o">.</span><span class="n">size</span><span class="p">))</span>
+    <span class="n">PhiGrad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">Phi</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="c"># PhiGrad2 = np.zeros(Phi.shape)        # uncomment the PhiGrad2 lines if you need the second derivative</span>
+
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">centers</span><span class="o">.</span><span class="n">size</span><span class="p">):</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span> <span class="o">-</span> <span class="n">centers</span><span class="p">[</span><span class="n">j</span><span class="p">])</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="n">sigmasq</span> <span class="p">)</span>
+        <span class="n">zgrad</span> <span class="o">=</span> <span class="o">-</span> <span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span> <span class="o">-</span> <span class="n">centers</span><span class="p">[</span><span class="n">j</span><span class="p">])</span> <span class="o">/</span> <span class="n">sigmasq</span>
+        <span class="c"># zhess = PhiGrad[:,j] * zgrad + z * (- 1 / sigmasq)</span>
+
+        <span class="n">Phi</span><span class="p">[:,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">z</span>
+        <span class="n">PhiGrad</span><span class="p">[:,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">z</span> <span class="o">*</span> <span class="n">zgrad</span>
+        <span class="c"># PhiGrad2[:,j] = zhess</span>
+
+    <span class="k">return</span> <span class="n">Phi</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,)),</span> <span class="n">PhiGrad</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,))</span> <span class="c">#, PhiGrad2</span>
+
+<div class="viewcode-block" id="eval_basis"><a class="viewcode-back" href="../api.html#tentbasis.eval_basis">[docs]</a><span class="k">def</span> <span class="nf">eval_basis</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">Phi</span><span class="p">,</span> <span class="n">PhiGrad</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Evaluates a function composed of basis functions given by vectors Phi,</span>
+<span class="sd">    and derivatives given by vectors PhiGrad.</span>
+
+<span class="sd">    Arguments</span>
+<span class="sd">    ---------</span>
+<span class="sd">    u       -- the input to evaluate</span>
+<span class="sd">    x       -- the input range of the basis vectors</span>
+<span class="sd">    Phi     -- the basis vectors (columns of Phi)</span>
+<span class="sd">    PhiGrad -- the derivative of the basis vectors (columns of PhiGrad)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    z       -- the input (u) evaluated at each basis function</span>
+<span class="sd">    zgrad   -- the input (u) evaluated at each basis function derivative</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">inds</span> <span class="o">=</span> <span class="n">_find_nearest</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">u</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">Phi</span><span class="p">[</span><span class="n">inds</span><span class="p">,</span> <span class="p">:],</span> <span class="n">PhiGrad</span><span class="p">[</span><span class="n">inds</span><span class="p">,</span> <span class="p">:]</span>
+</div>
+<div class="viewcode-block" id="make_rcos_basis"><a class="viewcode-back" href="../api.html#tentbasis.make_rcos_basis">[docs]</a><span class="k">def</span> <span class="nf">make_rcos_basis</span><span class="p">(</span><span class="n">tau</span><span class="p">,</span> <span class="n">numBases</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="mf">0.2</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Makes a raised cosine bases (useful for projecting temporal filters)</span>
+
+<span class="sd">    Arguments</span>
+<span class="sd">    ---------</span>
+<span class="sd">    tau       -- the time vector along which the bases are generated</span>
+<span class="sd">    numBases  -- the number of bases to generate. should be smaller than the size of tau</span>
+<span class="sd">    bias      -- a parameter that can make the time scaling more linear (as bias =&gt; Inf) or more skewed (as bias =&gt; 0) [default is 0.2]</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Phi       -- the generated basis vectors</span>
+<span class="sd">    PhiOrth   -- the same basis vectors, but orthogonalized</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">scipy.linalg</span> <span class="kn">import</span> <span class="n">orth</span>
+
+    <span class="c"># bias must be nonnegative</span>
+    <span class="k">if</span> <span class="n">bias</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Bias term must be positive.&#39;</span><span class="p">)</span>
+
+    <span class="c"># log-scaled time range to place peak centers, plus a factor for stability</span>
+    <span class="n">logTime</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">tau</span> <span class="o">+</span> <span class="n">bias</span> <span class="o">+</span> <span class="mf">1e-20</span><span class="p">);</span>
+
+    <span class="c"># centers for basis vectors</span>
+    <span class="n">centers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">logTime</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">logTime</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">numBases</span><span class="p">);</span>
+
+    <span class="c"># make the basis</span>
+    <span class="n">Phi</span> <span class="o">=</span> <span class="n">_rcos</span><span class="p">(</span><span class="n">logTime</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">centers</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">centers</span><span class="p">)));</span>
+    
+    <span class="c"># return basis and orthogonalized basis</span>
+    <span class="k">return</span> <span class="n">Phi</span><span class="p">,</span> <span class="n">orth</span><span class="p">(</span><span class="n">Phi</span><span class="p">)</span>
+</div>
+<span class="k">def</span> <span class="nf">_rcos</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">dc</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The raised cosine function:</span>
+<span class="sd">    f(x) = 0.5 * cos(u + 1)</span>
+
+<span class="sd">    where u is:</span>
+<span class="sd">    -pi                 if        (x - c)*pi / 2*dc &lt;  -pi</span>
+<span class="sd">    (x-c)*pi / 2*dc     if -pi &lt;= (x - c)*pi / 2*dc &lt;= -pi</span>
+<span class="sd">     pi                 if        (x - c)*pi / 2*dc &gt;   pi</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="mf">0.5</span><span class="o">*</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span><span class="mf">0.5</span><span class="o">*</span><span class="p">(</span><span class="n">x</span><span class="o">-</span><span class="n">c</span><span class="p">)</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="n">dc</span><span class="p">)))</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_find_nearest</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Finds the nearest index of given values to an array location</span>
+
+<span class="sd">    Arguments</span>
+<span class="sd">    ---------</span>
+<span class="sd">    x       -- the discretized input range we wish to approximate</span>
+<span class="sd">    values  -- the (arbitrary precision) input values</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    indices -- an array (same size as values) containing the nearest index of each value to x</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">x</span><span class="o">-</span><span class="n">v</span><span class="p">)</span><span class="o">.</span><span class="n">argmin</span><span class="p">()</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span><span class="o">.</span><span class="n">ravel</span><span class="p">()])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_mspline</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">centers</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">idx</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generate an mspline function</span>
+
+<span class="sd">    Arguments</span>
+<span class="sd">    ---------</span>
+<span class="sd">    x           -- x-locations to compute the spline at</span>
+<span class="sd">    centers     -- x-locations of the knots</span>
+<span class="sd">    order       -- order of the spline</span>
+<span class="sd">    idx         -- which spline (knot) to compute the spline for</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    y           -- a vector containing the spline values for the corresponding x-locations</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">centers</span><span class="p">[</span><span class="n">idx</span> <span class="o">+</span> <span class="n">order</span><span class="p">]</span> <span class="o">-</span> <span class="n">centers</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">0.0</span> <span class="o">*</span> <span class="n">x</span>
+
+    <span class="k">if</span> <span class="n">order</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">in_support</span> <span class="o">=</span> <span class="p">(</span><span class="n">centers</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">x</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">x</span> <span class="o">&lt;</span> <span class="n">centers</span><span class="p">[</span><span class="n">idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">in_support</span> <span class="o">*</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="n">centers</span><span class="p">[</span><span class="n">idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">centers</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">+</span> <span class="o">~</span><span class="n">in_support</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">order</span> <span class="o">*</span> <span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="n">centers</span><span class="p">[</span><span class="n">idx</span><span class="p">])</span> <span class="o">*</span> <span class="n">_mspline</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">centers</span><span class="p">,</span> <span class="n">order</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">idx</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">centers</span><span class="p">[</span><span class="n">idx</span> <span class="o">+</span> <span class="n">order</span><span class="p">]</span> <span class="o">-</span> <span class="n">x</span><span class="p">)</span> <span class="o">*</span>
+                    <span class="n">_mspline</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">centers</span><span class="p">,</span> <span class="n">order</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span> <span class="o">/</span> <span class="p">((</span><span class="n">order</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">centers</span><span class="p">[</span><span class="n">idx</span> <span class="o">+</span> <span class="n">order</span><span class="p">]</span> <span class="o">-</span> <span class="n">centers</span><span class="p">[</span><span class="n">idx</span><span class="p">]))</span>
+
+<span class="k">def</span> <span class="nf">_ispline</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">centers</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">idx</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generate an i-spline function</span>
+
+<span class="sd">    Arguments</span>
+<span class="sd">    ---------</span>
+<span class="sd">    x           -- x-locations to compute the spline at</span>
+<span class="sd">    centers     -- x-locations of the knots</span>
+<span class="sd">    order       -- order of the spline</span>
+<span class="sd">    idx         -- which spline (knot) to compute the spline for</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    y           -- a vector containing the spline values for the corresponding x-locations</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">idx</span> <span class="o">+</span> <span class="n">order</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">centers</span><span class="p">)</span> <span class="o">-</span> <span class="n">order</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)):</span>
+        <span class="n">y</span> <span class="o">+=</span> <span class="p">(</span><span class="n">centers</span><span class="p">[</span><span class="n">m</span> <span class="o">+</span> <span class="n">order</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">centers</span><span class="p">[</span><span class="n">m</span><span class="p">])</span> <span class="o">*</span> <span class="n">_mspline</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">centers</span><span class="p">,</span> <span class="n">order</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">order</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">y</span><span class="p">[</span><span class="n">x</span> <span class="o">&lt;=</span> <span class="n">centers</span><span class="p">[</span><span class="n">idx</span><span class="p">]]</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">y</span><span class="p">[</span><span class="n">x</span> <span class="o">&gt;</span> <span class="n">centers</span><span class="p">[</span><span class="n">idx</span> <span class="o">+</span> <span class="n">order</span><span class="p">]]</span> <span class="o">=</span> <span class="mf">1.0</span>
+    <span class="k">return</span> <span class="n">y</span>
+</pre></div>
+
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Niru Maheswaranathan.
+    </p>
+  </div>
+
+  <a href="https://github.com/snide/sphinx_rtd_theme">Sphinx theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
