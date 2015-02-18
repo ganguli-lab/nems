@@ -29,5 +29,4 @@ setup(name='nems',
           'Operating System :: MacOS :: MacOS X',
           'Topic :: Scientific/Engineering :: Information Analysis'],
       packages=['nems'],
-      license='LICENSE.md'
 )

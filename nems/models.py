@@ -19,31 +19,21 @@ References
 ----------
 Coming soon
 
-Examples
---------
-Demos using sample data are included in the `demo` folder
-
 """
 
-# standard imports
+# imports
 import time
 import copy
 from os.path import join
 from functools import partial
-
-# scientific python
 import numpy as np
-import matplotlib.pyplot as plt
-
-# model-fitting imports
 from . import tentbasis
-from . import proxops
 from . import datastore
-
-# external imports
 from .sfo_admm import SFO
-import pyret.visualizations as viz
-import seaborn as sns
+from proxalgs import Optimizer
+
+# exports
+__all__ = ['NeuralEncodingModel', 'LNLN']
 
 
 class NeuralEncodingModel(object):
@@ -283,52 +273,56 @@ class NeuralEncodingModel(object):
 class LNLN(NeuralEncodingModel):
     def __init__(self, stim, rate, filter_dims, minibatch_size=None, frac_train=0.8, num_subunits=1,
                  num_tents=30, sigmasq=0.2, tent_type='gaussian', spikes=None, **kwargs):
-        """Initializes a two layer cascade (LNLN) model
+        """
+        Initializes a two layer cascade (LNLN) model
 
-        model = LNLN(stim, rate, filter_dims, theta_init=None, minibatchSize=None)
+        Usage
+        -----
+        >> model = LNLN(stim, rate, filter_dims, theta_init=None, minibatchSize=None)
 
-        :param stim:
+        Parameters
+        ----------
+        stim : array_like
             a spatiotemporal stimulus. must have dimensions of (N by T), where N is the dimensionality of the
             first linear filter, and T is the number of samples / time points in the experiment
 
-        :param rate:
+        rate : array_like
             the recorded firing rate corresponding to the stimulus, must have dimensions of (T,)
 
-        :param filter_dims:
+        filter_dims : tuple
             a tuple defining the dimensions for the spatiotemporal filter. e.g., (n,n,tau) for a 2D stimulus or
             or (n,tau) for a bars stimulus. tau must be less than T, the length of the experiment, and N (the
             stimulus dimensionality) must equal the product of all but the last item in the tuple.
 
-        :param minibatch_size:
+        minibatch_size : int, optional
             the size of each minibatch, in samples. defaults to a value such that the number of minibatches is
             roughly equal to 0.1 * sqrt(T), the SFO 'sweet spot'
 
-        :param frac_train:
+        frac_train : float, optional
             number between 0 and 1, gives the fraction of minibatches used for training (default: 0.8)
 
-        :param num_subunits:
+        num_subunits : int, optional
             number of subunits to use (default: 1), if a initial W is given, this parameter is unused
 
-        :param num_tents:
+        num_tents : int, optional
             number of tent basis functions to use for parameterizing nonlinearities
 
-        :param sigmasq:
+        sigmasq : float, optional
             the size / scale of each tent basis function (default: 0.2)
 
-        :param tent_type:
+        tent_type : string
             the type of tent basis function to use (default: 'Gaussian')
 
-        :param kwargs:
-            optionally pass in initial parameter values, W=W_init and f=f_init
+        Optional Arguments
+        ------------------
+        optionally pass in initial parameter values, W=W_init and f=f_init
 
-        :return:
-            the model object
         """
 
         ### initialize the model object
         NeuralEncodingModel.__init__(self, 'lnln_exp', stim, rate, spikes, filter_dims, minibatch_size, frac_train)
 
-        ### initialize model parameters
+        # initialize model parameters
         # default # of subunits
         if 'W' in kwargs:
             self.num_subunits = kwargs['W'].shape[0]
@@ -337,7 +331,7 @@ class LNLN(NeuralEncodingModel):
 
         # initialize tent basis functions
         num_tent_samples = 1000
-        tent_span = (-5,5)
+        tent_span = (-5,5)          # works for z-scored input
         self.tentparams = tentbasis.build_tents(num_tent_samples, tent_span, num_tents, tent_type=tent_type, sigmasq=sigmasq)
 
         # initialize filter parameters
@@ -370,7 +364,7 @@ class LNLN(NeuralEncodingModel):
 
             self.theta_init['f'] = np.hstack((self.theta_init['f'], np.zeros((self.num_subunits,1))))
 
-        ### initialize regularizers
+        # initialize regularizers
         self.regularizers = {'W': list(), 'f': list()}
 
 
@@ -433,71 +427,6 @@ class LNLN(NeuralEncodingModel):
         return obj_value, obj_gradient
 
 
-    def fit_naive(self, num_alt=10, num_steps=50):
-        """
-        optimizes without ADMM
-        """
-
-        # need to import Jascha's SFO code
-        from sfo.sfo import SFO as SFO_plain
-
-        # grab the initial parameters
-        Wk = self.theta_init['W'].copy()
-        fk = self.theta_init['f'].copy()
-
-        # get list of training data
-        train_data = [self.data[idx] for idx in self.train_indices]
-
-        # store optimization results and parameters
-        opt = list()
-        Ws = [Wk]
-        fs = [fk]
-
-        # runtime
-        self.tinit = time.time()
-        self.theta_temp = copy.deepcopy(self.theta_init)
-        runtimes = list()
-        evals = list()
-
-        def callback_func(mu, res):
-            if mu.ndim == 3:
-                self.theta_temp['W'] = mu.copy()
-            else:
-                self.theta_temp['f'] = mu.copy()
-            runtimes.append(time.time() - self.tinit)
-            evals.append(self.test(self.theta_temp)[1])
-            self.tinit = time.time()
-
-        # alternating optimization
-        for alt_iter in range(num_alt):
-
-            ### Fit nonlinearity
-            # initialize the optimizer for the nonlinearity
-            def f_df_wrapper(f, d):
-                return self.f_df(Wk, f, d, param_gradient='f')
-
-            # optimize
-            optimizer = SFO_plain(f_df_wrapper, fk, train_data, display=2)
-            fk = optimizer.optimize(num_steps=num_steps)
-            callback_func(fk, 1)
-            fs.append(fk)
-
-            ### Fit filters
-            # initialize the optimizer for the filters
-            def f_df_wrapper(W, d):
-                return self.f_df(W, fk, d, param_gradient='W')
-
-            # optimize
-            optimizer = SFO_plain(f_df_wrapper, Wk, train_data, display=2)
-            Wk = optimizer.optimize(num_steps=num_steps)
-            callback_func(Wk, 1)
-            Ws.append(Wk)
-
-        # store learned parameters
-        self.theta = {'W': Wk, 'f': fk}
-
-        return opt, Ws, fs, runtimes, evals
-
     def fit(self, num_alt=2, num_steps=50, num_iter=5):
 
         # grab the initial parameters
@@ -508,7 +437,7 @@ class LNLN(NeuralEncodingModel):
         train_data = [self.data[idx] for idx in self.train_indices]
 
         # store optimization results and parameters
-        opt = list()
+        results = list()
         Ws = [Wk]
         fs = [fk]
 
@@ -518,6 +447,7 @@ class LNLN(NeuralEncodingModel):
         runtimes = list()
         evals = list()
 
+        # not being used right now
         def callback_func(mu, res):
             if mu.ndim == 3:
                 self.theta_temp['W'] = mu.copy()
@@ -530,40 +460,36 @@ class LNLN(NeuralEncodingModel):
         # alternating optimization
         for alt_iter in range(num_alt):
 
-            ### Fit nonlinearity
+            # Fit nonlinearity
             # initialize the optimizer for the nonlinearity
             def f_df_wrapper(f, d):
                 return self.f_df(Wk, f, d, param_gradient='f')
-            optimizer = SFO(f_df_wrapper, fk, train_data, display=1)
 
-            # get list of objectives (likelihood + regularizers)
-            objectives = [partial(proxops.sfo, optimizer=optimizer, num_steps=num_steps)] + self.regularizers['f']
-
-            # optimize
-            fk, res = proxops.minimize(objectives, fk, num_iter=num_iter, rho_init=10, callback=callback_func)
+            opt = Optimizer('sfo', optimizer=SFO(f_df_wrapper, fk, train_data, display=1), num_steps=num_steps)
+            # TODO: FIX REGULARIZERS!
+            # opt.add_regularizer()
+            fk = opt.minimize(fk)
             fs.append(fk)
-            opt.append(res)
+            results.append(opt.results)
 
-            ### Fit filters
+            # Fit filters
             # initialize the optimizer for the filters
             def f_df_wrapper(W, d):
                 return self.f_df(W, fk, d, param_gradient='W')
-            optimizer = SFO(f_df_wrapper, Wk, train_data, display=1)
 
-            # get list of objectives (likelihood + regularizers)
-            objectives = [partial(proxops.sfo, optimizer=optimizer, num_steps=num_steps)] + self.regularizers['W']
-
-            # optimize
-            Wk, res = proxops.minimize(objectives, Wk, num_iter=num_iter, rho_init=10, callback=callback_func)
+            opt = Optimizer('sfo', optimizer=SFO(f_df_wrapper, Wk, train_data, display=1), num_steps=num_steps)
+            # TODO: FIX REGULARIZERS!
+            # opt.add_regularizer()
+            Wk = opt.minimize(Wk)
             for fi in range(Wk.shape[0]):
                 Wk[fi] = _nrm(Wk[fi])   # normalize filters
             Ws.append(Wk)
-            opt.append(res)
+            results.append(opt.results)
 
         # store learned parameters
         self.theta = {'W': Wk, 'f': fk}
 
-        return opt, Ws, fs, runtimes, evals
+        return results, Ws, fs, runtimes, evals
 
 
     def test_metrics(self, theta, data):
@@ -651,11 +577,11 @@ def _rolling_window(a, window):
     """
     Make an ndarray with a rolling window of the last dimension
 
-    Arguments
-    ---------
-    :param a:
+    Parameters
+    ----------
+    a : array_like
         Array to add rolling window to
-    :param window:
+    window : int
         Size of rolling window
 
     Returns
@@ -665,13 +591,13 @@ def _rolling_window(a, window):
 
     Examples
     --------
-    x=np.arange(10).reshape((2,5))
-    rolling_window(x, 3)
+    >> x=np.arange(10).reshape((2,5))
+    >> rolling_window(x, 3)
     array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]],
            [[5, 6, 7], [6, 7, 8], [7, 8, 9]]])
 
     Calculate rolling mean of last dimension:
-    np.mean(rolling_window(x, 3), -1)
+    >> np.mean(rolling_window(x, 3), -1)
     array([[ 1.,  2.,  3.],
            [ 6.,  7.,  8.]])
 
@@ -684,14 +610,10 @@ def _rolling_window(a, window):
     strides = a.strides + (a.strides[-1],)
     return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
 
+
 def _nrm(x):
-    """norms the data in the array x by the (vectorized) norm
+    """
+    Normalizes data in the given array x by the (vectorized) norm
+
     """
     return x / np.linalg.norm(x.ravel())
-
-def _huber(x, delta=1.0):
-    # h = np.abs(x)*(np.abs(x) > 1) + (x**2)*(np.abs(x) <= 1)
-    # hgrad = -1*(x < -1) + (x > 1) + (2*x)*(np.abs(x) <= 1)
-    h = delta * (np.sqrt(1+(x/delta)**2) - 1)
-    hgrad = (delta/2)*((1+(x/delta)**2)**(-0.5))*(2*x/delta)
-    return h, hgrad
