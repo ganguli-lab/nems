@@ -1,0 +1,261 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>nems.simulate &mdash; nems 0.1 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="top" title="nems 0.1 documentation" href="../../index.html"/>
+        <link rel="up" title="Module code" href="../index.html"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        <a href="../../index.html" class="fa fa-home"> nems</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+        
+            <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../install.html#basic">Basic</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../quickstart.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../quickstart.html#bugs">Bugs</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#module-nems.datastore">nems.datastore</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#module-nems.models">nems.models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#module-nems.objectives">nems.objectives</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#module-nems.sensitivity">nems.sensitivity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#module-nems.simulate">nems.simulate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#module-nems.tentbasis">nems.tentbasis</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+</ul>
+
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../../index.html">nems</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      
+    <li>nems.simulate</li>
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            
+  <h1>Source code for nems.simulate</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">A module for generating data from simulated models</span>
+
+<span class="sd">.. warning:: Work in progress</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="simulateexpt"><a class="viewcode-back" href="../../api.html#nems.simulate.simulateexpt">[docs]</a><span class="k">def</span> <span class="nf">simulateexpt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">numBatches</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">numSamplesPerBatch</span><span class="o">=</span><span class="mi">1000</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Simulates data from the model</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># TODO: update simulateexpt to work with the new objective f_df</span>
+
+    <span class="c"># generate data</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">numBatches</span><span class="p">):</span>
+
+        <span class="c"># generate stimuli</span>
+        <span class="n">stim</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">numSamplesPerBatch</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">stim_dim</span><span class="p">)</span>
+
+        <span class="c"># generate &#39;true&#39; firing rate</span>
+        <span class="n">rate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">modelrate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">theta_true</span><span class="p">,</span> <span class="p">{</span><span class="s">&#39;stim&#39;</span><span class="p">:</span> <span class="n">stim</span><span class="p">})[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="c"># hack: cap rate to a reasonable amount</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">rate</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dt</span> <span class="o">&gt;</span> <span class="mi">100</span><span class="p">):</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&#39;[warning] Model simulation has very high firing rates. Maybe tweak parameters? Capping to 100&#39;</span><span class="p">)</span>
+            <span class="n">rate</span><span class="p">[</span><span class="n">rate</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dt</span> <span class="o">&gt;</span> <span class="mi">100</span><span class="p">]</span> <span class="o">=</span> <span class="mf">100.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">dt</span>
+
+        <span class="c"># generate spike counts</span>
+        <span class="n">spkcount</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">poisson</span><span class="p">(</span><span class="n">rate</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dt</span><span class="p">)</span>
+
+        <span class="c"># store</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s">&#39;stim&#39;</span><span class="p">:</span> <span class="n">stim</span><span class="p">,</span> <span class="s">&#39;rate&#39;</span><span class="p">:</span> <span class="n">rate</span><span class="p">,</span> <span class="s">&#39;spkcount&#39;</span><span class="p">:</span> <span class="n">spkcount</span><span class="p">})</span>
+
+    <span class="c"># store dimensions</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span> <span class="o">=</span> <span class="n">numSamplesPerBatch</span>
+
+    <span class="c"># data has been loaded</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">loaded</span> <span class="o">=</span> <span class="bp">True</span>
+
+</div>
+<div class="viewcode-block" id="simulate_LNLN"><a class="viewcode-back" href="../../api.html#nems.simulate.simulate_LNLN">[docs]</a><span class="k">def</span> <span class="nf">simulate_LNLN</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">num_tents</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">num_tent_samples</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">sigmasq</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">numBatches</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+             <span class="n">numSamplesPerBatch</span><span class="o">=</span><span class="mi">1000</span><span class="p">):</span>
+
+    <span class="c"># # generate fake model parameters</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">dt</span> <span class="o">=</span> <span class="n">dt</span>
+
+    <span class="c"># subunits</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">num_subunits</span> <span class="o">=</span> <span class="mi">3</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">stim_dim</span> <span class="o">=</span> <span class="n">dim</span>
+
+    <span class="c"># parameters</span>
+    <span class="n">numBases</span> <span class="o">=</span> <span class="mi">100</span>
+    <span class="n">surround_scaling</span> <span class="o">=</span> <span class="mf">0.2</span>
+    <span class="n">phix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">dim</span><span class="p">)</span>
+
+    <span class="c"># build center and surround Gaussians</span>
+    <span class="n">centers</span> <span class="o">=</span> <span class="n">tentbasis</span><span class="o">.</span><span class="n">makeGaussianBasis</span><span class="p">(</span><span class="n">phix</span><span class="p">,</span> <span class="n">numBases</span><span class="p">,</span> <span class="n">sigmasq</span><span class="o">=</span><span class="mf">0.005</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">surrounds</span> <span class="o">=</span> <span class="n">tentbasis</span><span class="o">.</span><span class="n">makeGaussianBasis</span><span class="p">(</span><span class="n">phix</span><span class="p">,</span> <span class="n">numBases</span><span class="p">,</span> <span class="n">sigmasq</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="c"># subtract to form receptive fields (rfs)</span>
+    <span class="n">rfs</span> <span class="o">=</span> <span class="n">centers</span> <span class="o">-</span> <span class="n">surround_scaling</span> <span class="o">*</span> <span class="n">surrounds</span>
+
+    <span class="c"># pick receptive fields</span>
+    <span class="n">W</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_subunits</span><span class="p">))</span>
+    <span class="n">W</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">rfs</span><span class="p">[:,</span> <span class="mi">30</span><span class="p">]</span>
+    <span class="n">W</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">rfs</span><span class="p">[:,</span> <span class="mi">50</span><span class="p">]</span>
+    <span class="n">W</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">rfs</span><span class="p">[:,</span> <span class="mi">70</span><span class="p">]</span>
+
+    <span class="c"># initialize filter parameters</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">theta_true</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+
+    <span class="c"># subunit filters</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">theta_true</span><span class="p">[</span><span class="s">&#39;W&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">nrm</span><span class="p">(</span><span class="n">W</span><span class="p">)</span>
+
+    <span class="c"># subunit nonlinearities</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">num_tents</span> <span class="o">=</span> <span class="n">num_tents</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">num_tent_samples</span> <span class="o">=</span> <span class="n">num_tent_samples</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">sigmasq</span> <span class="o">=</span> <span class="n">sigmasq</span>  <span class="c"># np.squeeze(sigmasq * np.diff(self.tent_span))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">init_tents</span><span class="p">()</span>
+
+    <span class="n">offsets</span> <span class="o">=</span> <span class="mf">1.5</span> <span class="o">+</span> <span class="mf">0.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_subunits</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">slopes</span> <span class="o">=</span> <span class="mf">2.5</span> <span class="o">+</span> <span class="mf">0.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_subunits</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">tent_x</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_subunits</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_subunits</span><span class="p">):</span>
+        <span class="n">y</span><span class="p">[:,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">slopes</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mf">1.5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">tent_x</span> <span class="o">-</span> <span class="n">offsets</span><span class="p">[</span><span class="n">j</span><span class="p">]))</span> <span class="o">-</span> <span class="mi">5</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">theta_true</span><span class="p">[</span><span class="s">&#39;f&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">lstsq</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Phi</span><span class="p">,</span> <span class="n">y</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="c"># # simulate data</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">simulatedata</span><span class="p">(</span><span class="n">numBatches</span><span class="o">=</span><span class="n">numBatches</span><span class="p">,</span> <span class="n">numSamplesPerBatch</span><span class="o">=</span><span class="n">numSamplesPerBatch</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Niru Maheswaranathan.
+    </p>
+  </div>
+
+  <a href="https://github.com/snide/sphinx_rtd_theme">Sphinx theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
