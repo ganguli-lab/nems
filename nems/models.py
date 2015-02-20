@@ -24,25 +24,24 @@ Coming soon
 # imports
 import time
 import copy
-from os.path import join
 from functools import partial
 import numpy as np
 from . import tentbasis
-from . import datastore
 from .sfo_admm import SFO
-from proxalgs import Optimizer
+from proxalgs.core import Optimizer
+from proxalgs import operators
 
 # exports
 __all__ = ['NeuralEncodingModel', 'LNLN']
 
 
 class NeuralEncodingModel(object):
-    """an object which manages optimizing parameters of neural encoding models.
-    Specifically, fits either LN or LNLN models given a firing rate in response
-    to a spatiotemporal stimulus.
+    """
+    Neural enoding model object
+
     """
 
-    def __init__(self, modeltype, stimulus, rate, spikes, filter_dims, minibatch_size, frac_train):
+    def __init__(self, modeltype, stimulus, rate, filter_dims, minibatch_size, frac_train=0.8, spikes=None):
 
         # model name / subclass
         self.modeltype = str.lower(modeltype)
@@ -59,17 +58,17 @@ class NeuralEncodingModel(object):
         # filter dimensions must be (n1 x n2 x tau), while the stimulus dimensions should be (n1*n2 x t)
         assert stimulus.shape[0] == self.stim_dim, 'Stimulus size does not match up with filter dimensions'
 
-        ### initialize minibatches
-        # set up minibatches data
+        # split data into minibatches
         if minibatch_size is None:
-            # choose number of minibatches according to the 'sweet spot' for SFO, sqrt(T)/10
-            minibatch_size = np.round(10 * np.sqrt(self.num_samples)).astype('int')
+
+            # choose number of minibatches as sqrt(T)/10
+            minibatch_size = np.ceil(0.1 * np.sqrt(self.num_samples)).astype('int')
             num_minibatches = int(self.num_samples / minibatch_size)
+
         else:
             num_minibatches = int(self.num_samples / minibatch_size)
 
-        ### initialize data
-        # slice the z-scored stimulus every tau samples
+        # slice the z-scored stimulus every tau samples, for easier dot products
         slices = _rolling_window((stimulus-np.mean(stimulus))/np.std(stimulus), self.tau)
 
         # store stimulus and rate data for each minibatch in a list
@@ -79,25 +78,30 @@ class NeuralEncodingModel(object):
             # indices for this minibatch
             minibatch_indices = slice(idx * minibatch_size, (idx + 1) * minibatch_size)
 
-            # z-score the stimulus and save each minibatch, along with the rate
-            self.data.append({
-                'stim': slices[:, minibatch_indices, :],
-                'rate': rate[minibatch_indices],
-                'spikes': np.where(spikes[minibatch_indices] > 0)[0]
-            })
+            # z-score the stimulus and save each minibatch, along with the rate and spikes if given
+            if spikes is not None:
+                self.data.append({
+                    'stim': slices[:, minibatch_indices, :],
+                    'rate': rate[minibatch_indices],
+                    'spikes': np.where(spikes[minibatch_indices] > 0)[0]
+                })
 
-        # reproducible experiments
-        self.random_seed = 1234
+            else:
+                self.data.append({
+                    'stim': slices[:, minibatch_indices, :],
+                    'rate': rate[minibatch_indices]
+                })
+
+        # set and store random seed (for reproducibility)
+        self.random_seed = np.random.randint(1e5)
         np.random.seed(self.random_seed)
 
         # split up data into train/validation/test sets
         num_train = int(np.round(frac_train * num_minibatches))
-        num_validation = int(np.ceil(0.5*(num_minibatches - num_train)))
         indices = np.arange(num_minibatches)
         np.random.shuffle(indices)
         self.train_indices = indices[:num_train]
-        self.validation_indices = indices[num_train:(num_train+num_validation)]
-        self.test_indices = indices[(num_train+num_validation):]
+        self.test_indices = indices[num_train:]
 
         # compute the STA
         self._getsta()
@@ -105,169 +109,111 @@ class NeuralEncodingModel(object):
         # compute the mean firing rate
         self.meanrate = np.mean([np.mean(d['rate']) for d in self.data])
 
-    def __repr__(self):
-        return "%s(%r)" % (self.__class__, self.__dict__)
 
     def __str__(self):
         return "Neural encoding model, " + self.modeltype
 
+
     def _getsta(self):
-        """Compute an STA
+        """
+        Compute an STA
+
         """
         T = float(self.data[0]['rate'].size)
-        stas = [np.tensordot(d['stim'], d['rate'], ([1], [0]))/T for d in self.data]
+        stas = [np.tensordot(d['stim'], d['rate'], axes=([1], [0]))/T for d in self.data]
         self.sta = np.mean(stas,axis=0).reshape(self.filter_dims)
 
 
     def add_regularizer(self, theta_key, proxfun, **kwargs):
-        """Add a proximal operator / objective to optimize
+        """
+        Add a proximal operator / objective to the objective, using the proxalgs package
 
-        Arguments
-        ---------
-        proxfun     -- proxfun is a function that evaluates a proximal operator (see proxops.py for some examples)
-                        It takes as input the current parameter values, the parameter rho (momentum term), and
-                        optional keyword args
+        Parameters
+        ----------
+        theta_key : string
+            The key corresponding to the parameters that this proximal function should be applied to
+
+        proxfun : string
+            The name of the corresponding function in the proxalgs.operators module
+
+        \\*\\*kwargs : keyword arguments
+            Any keyword arguments required by proxfun
 
         """
-        assert 'regularizers' in self.__dict__, 'List of regularizers not initialized!'
-        assert hasattr(proxops, proxfun), 'Could not find function ' + proxfun + ' in proxops.py'
 
-        def wrapper(v, rho, **kwargs):
+        # ensure regularizers have been initialized
+        assert "regularizers" in self.__dict__, "Regularizers dictionary has not been initialized!"
+        assert theta_key in self.regularizers, "Key '" + theta_key + "' not found in self.regularizers!"
 
-            # copy the parameters
-            v_new = copy.deepcopy(v)
+        # build a wrapper function that applies the desired proximal operator to each element of the parameter array
+        def wrapper(theta, rho, **kwargs):
 
-            # apply the proximal operator to each element in
-            for idx, param in enumerate(v):
-                v_new[idx] = getattr(proxops, proxfun)(param.copy(), float(rho), **kwargs)
+            # creating a copy of the parameters isolates them from any modifications applied by proxfun
+            theta_new = copy.deepcopy(theta)
 
-            return v_new
+            # apply the proximal operator to each element in the parameter array
+            for idx, param in enumerate(theta):
+                theta_new[idx] = getattr(operators, proxfun)(param.copy(), float(rho), **kwargs)
 
-        # add proximal operator to the list
+            return theta_new
+
+        # add this proximal operator function to the list
         self.regularizers[theta_key].append(partial(wrapper, **kwargs))
 
-    def notify(self, msg, client, desc=''):
-        titlestr = '%s: %s (%s)' % (self.modeltype, desc, time.strftime('%h %d %I:%M %p'))
-        client.send_message(msg, title=titlestr)
 
-    def init_datastore(self, name, desc, extra_headers):
-        main_headers = ('Corr. coeff. (train)', 'Objective (train)', 'Mean squared error (train)',
-                        'Corr. coeff. (test)', 'Objective (test)', 'Mean squared error (test)')
-        self.db = datastore.Datastore(name, desc, main_headers + extra_headers)
-
-    def fit_final_nonlinearity(self, bin_range_sigma=5, num_bins=2000, num_tents=100):
+    def metrics(self):
         """
-        Fit the final nonlinearity
+        Default metrics for evaluating models
+
+        .. warning:: Work in progress
+
+        Parameters
+        ----------
 
         """
 
-        # estimate range of the input to the final nonlinearity
-        logr = np.hstack([self._rate(self.theta, d['stim'])[-2] for d in self.data])
-        bin_range = (np.mean(logr) - bin_range_sigma*np.std(logr), np.mean(logr) + bin_range_sigma*np.std(logr))
-        sigmasq = np.squeeze(0.1 * np.diff(bin_range) / float(num_tents))
 
-        # tent basis functions for the final nonlinearity
-        tentparams = tentbasis.build_tents(num_bins, bin_range, num_tents, tent_type='linear', sigmasq=sigmasq)
-
-        # build the objective function
-        def f_df(theta, d):
-            logr = self._rate(theta, d)[-2]
-            err, err_grad = huber(rhat - d['rate'], delta=10.0)
-            z, zgrad = tentbasis.eval_tents(u, self.tentparams)
-
-
-        # def f_df()
-
-    def test(self, theta, metadata=()):
+    def test(self):
         """
-        Compare model to true (held out) data
-        results = model.test(theta_key='theta_sfo', metadata=())
-        returns a list of tuples, each tuple is of the following form:
-        (metadata, minibatch_idx, set, cc, fobj, mse)
-        where minibatch_idx is the index of the minibatch,
-        set is either 'train' or 'test'
-        and cc (correlation coefficient), fobj (main objective), and mse (mean squared error) are numbers
+        Evaluate the model on held out data
+
+        .. warning:: Work in progress
+
+        Examples
+        --------
+        Given an initialized and trained instance of NeuralEncodingModel, you can test the model on
+        held out data as follows:
+
+        >>> results = model.test()
+
+        Parameters
+        ----------
+
         """
+        assert "metrics" in self.__dict__, "Model class must have a metrics() function to call when testing"
+
         results = list()
         train_res = list()
-        validation_res = list()
         test_res = list()
-
-        for train_idx in self.train_indices:
-            tr = self.test_metrics(theta, self.data[train_idx])[0]
-            results.append(metadata + (train_idx, 'train') + tr)
-            train_res.append(tr)
-
-        for validation_idx in self.validation_indices:
-            tr = self.test_metrics(theta, self.data[validation_idx])[0]
-            results.append(metadata + (validation_idx, 'validation') + tr)
-            validation_res.append(tr)
-
-        for test_idx in self.test_indices:
-            tr = self.test_metrics(theta, self.data[test_idx])[0]
-            results.append(metadata + (test_idx, 'test') + tr)
-            test_res.append(tr)
-
-        num_train = float(len(self.train_indices))
-        num_validation = float(len(self.validation_indices))
-        num_test = float(len(self.test_indices))
-        avg = tuple(np.nanmean(np.vstack(train_res),      axis=0)) + \
-              tuple(np.nanmean(np.vstack(validation_res), axis=0)) + \
-              tuple(np.nanmean(np.vstack(test_res),       axis=0))
-        spread = tuple(np.nanstd(np.vstack(train_res),      axis=0) / np.sqrt(num_train)) + \
-                 tuple(np.nanstd(np.vstack(validation_res), axis=0) / np.sqrt(num_validation)) + \
-                 tuple(np.nanstd(np.vstack(test_res),       axis=0) / np.sqrt(num_test))
-
-        return results, avg, spread
-
-    def plot(self, filename=None):
-
-        # determine number of subunits
-        nsub = self.theta['W'].shape[0]
-
-        # make a figure
-        fig = plt.figure(figsize=(6, 4 * nsub))
-        fig.clf()
-        sns.set_style('whitegrid')
-
-        # build axes for each subunit
-        for idx in range(nsub):
-
-            # top row: filter
-            ax = plt.subplot2grid((3,nsub), (0,idx), rowspan=2)
-            # viz.plotsta1D(self.theta['W'][idx], ax)
-            W = self.theta['W'][idx] - np.median(self.theta['W'][idx])
-            ax.imshow(W, cmap='seismic', vmin=-np.max(np.abs(W)), vmax=np.max(np.abs(W)))
-            ax.set_title('Subunit #%i' % (idx+1), fontsize=22)
-
-            # bottom row: nonlinearities
-            ax = plt.subplot2grid((3,nsub), (2,idx))
-            nonlin_func = np.exp(self.tentparams['Phi'].dot(self.theta['f'][idx, :].T))
-
-            # histogram
-            u = np.hstack([np.tensordot(d['stim'], self.theta['W'][idx], ([0, 2], [0, 1])) for d in self.data])
-            counts, bin_edges = np.histogram(u, bins=50, range=self.tentparams['tent_span'])
-            centers = bin_edges[:-1] + 0.5*np.diff(bin_edges)
-            count = counts.astype('float') / float(np.max(counts))
-            print(centers)
-            print(count)
-            ax.plot(centers, count * np.max(nonlin_func), '-', color='gray')
-            ax.fill(centers, count * np.max(nonlin_func), color='lightgray', alpha=0.15)
-            ax.set_xticklabels([])
-            ax.set_yticklabels([])
-
-            # the nonlinearity
-            ax.plot(self.tentparams['tent_x'], nonlin_func, '-', color='lightcoral', linewidth=3)
-            ax.set_xlim(self.tentparams['tent_span'][0]+0.1, self.tentparams['tent_span'][1]-0.1)
-
-        if filename is None:
-            plt.show()
-            plt.draw()
-
-        else:
-            plt.savefig(join(filename, 'cell' + str(self.cellidx) + '.png'))
-            plt.close()
-            del fig
+        #
+        # for train_idx in self.train_indices:
+        #     tr = self.metrics(theta, self.data[train_idx])[0]
+        #     results.append((train_idx, 'train') + tr)
+        #     train_res.append(tr)
+        #
+        # for test_idx in self.test_indices:
+        #     tr = self.metrics(theta, self.data[test_idx])[0]
+        #     results.append((test_idx, 'test') + tr)
+        #     test_res.append(tr)
+        #
+        # num_train = float(len(self.train_indices))
+        # num_test = float(len(self.test_indices))
+        # avg = tuple(np.nanmean(np.vstack(train_res),      axis=0)) + \
+        #       tuple(np.nanmean(np.vstack(test_res),       axis=0))
+        # spread = tuple(np.nanstd(np.vstack(train_res),      axis=0) / np.sqrt(num_train)) + \
+        #          tuple(np.nanstd(np.vstack(test_res),       axis=0) / np.sqrt(num_test))
+        #
+        # return results, avg, spread
 
 
 class LNLN(NeuralEncodingModel):
@@ -276,9 +222,10 @@ class LNLN(NeuralEncodingModel):
         """
         Initializes a two layer cascade (LNLN) model
 
-        Usage
-        -----
-        >> model = LNLN(stim, rate, filter_dims, theta_init=None, minibatchSize=None)
+        Examples
+        --------
+
+        >>> model = LNLN(stim, rate, filter_dims, theta_init=None, minibatchSize=None)
 
         Parameters
         ----------
@@ -296,7 +243,7 @@ class LNLN(NeuralEncodingModel):
 
         minibatch_size : int, optional
             the size of each minibatch, in samples. defaults to a value such that the number of minibatches is
-            roughly equal to 0.1 * sqrt(T), the SFO 'sweet spot'
+            roughly equal to :math:`0.1 * sqrt(T)`
 
         frac_train : float, optional
             number between 0 and 1, gives the fraction of minibatches used for training (default: 0.8)
@@ -313,16 +260,17 @@ class LNLN(NeuralEncodingModel):
         tent_type : string
             the type of tent basis function to use (default: 'Gaussian')
 
-        Optional Arguments
-        ------------------
-        optionally pass in initial parameter values, W=W_init and f=f_init
+        Other Parameters
+        ----------------
+        \\*\\*kwargs : keyword arguments
+            if given arguments with the keys `W` or `f`, then those values are used to initialize the filter
+            or nonlinearity parameters, respectively.
 
         """
 
-        ### initialize the model object
+        # initialize the model object
         NeuralEncodingModel.__init__(self, 'lnln_exp', stim, rate, spikes, filter_dims, minibatch_size, frac_train)
 
-        # initialize model parameters
         # default # of subunits
         if 'W' in kwargs:
             self.num_subunits = kwargs['W'].shape[0]
@@ -331,33 +279,50 @@ class LNLN(NeuralEncodingModel):
 
         # initialize tent basis functions
         num_tent_samples = 1000
-        tent_span = (-5,5)          # works for z-scored input
+        tent_span = (-5,5)          # suitable for z-scored input
         self.tentparams = tentbasis.build_tents(num_tent_samples, tent_span, num_tents, tent_type=tent_type, sigmasq=sigmasq)
 
-        # initialize filter parameters
+        # initialize parameter dictionary
         self.theta_init = dict()
         self.theta_init['W'] = np.zeros((self.num_subunits,) + (self.stim_dim, self.tau))
         self.theta_init['f'] = np.zeros((self.num_subunits, self.tentparams['num_tents']))
 
+        # initialize filter parameters
         if 'W' in kwargs:
-            # normalize each subunit
+
+            # ensure dimensions are consistent
+            assert self.theta_init['W'].shape == kwargs['W'].shape, "Shape of the filters (`W` keyword argument) " \
+                                                                    "are inconsistent with the given filter dimensions."
+
+            # normalize each of the given filters
             for idx, w in enumerate(kwargs['W']):
                 self.theta_init['W'][idx] = _nrm(w)
+
         else:
-            # multiple subunits: random init?
+
+            # multiple subunits: random initialization
             if self.num_subunits > 1:
                 for idx in range(self.num_subunits):
                     self.theta_init['W'][idx] = _nrm(0.1 * np.random.randn(self.stim_dim, self.tau))
 
+            # single subunit: initialize with the STA
             else:
                 self.theta_init['W'][0] = _nrm(self.sta).reshape(-1,self.sta.shape[-1])
 
         # initialize nonlinearity parameters
         if 'f' in kwargs:
+
+            # ensure dimensions are consistent
+            assert self.theta_init['f'].shape == kwargs['f'].shape, "Shape of the nonlinearity parameters" \
+                                                                    " (`f` keyword argument) are inconsistent with " \
+                                                                    "the number of tent basis functions."
+
             self.theta_init['f'] = kwargs['f']
+
         else:
+
+            # initialize each subunit nonlinearity to be linear
             for idx in range(self.num_subunits):
-                # initialize to a linear function
                 ts = self.tentparams['tent_span']
                 nonlin_init = np.linspace(ts[0], ts[1], self.tentparams['num_tent_samples'])
                 self.theta_init['f'][idx,:] = np.linalg.lstsq(self.tentparams['Phi'], nonlin_init)[0]
@@ -591,13 +556,14 @@ def _rolling_window(a, window):
 
     Examples
     --------
-    >> x=np.arange(10).reshape((2,5))
-    >> rolling_window(x, 3)
+    >>> x=np.arange(10).reshape((2,5))
+    >>> rolling_window(x, 3)
     array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]],
            [[5, 6, 7], [6, 7, 8], [7, 8, 9]]])
 
     Calculate rolling mean of last dimension:
-    >> np.mean(rolling_window(x, 3), -1)
+
+    >>> np.mean(rolling_window(x, 3), -1)
     array([[ 1.,  2.,  3.],
            [ 6.,  7.,  8.]])
 
@@ -613,7 +579,17 @@ def _rolling_window(a, window):
 
 def _nrm(x):
     """
-    Normalizes data in the given array x by the (vectorized) norm
+    Normalizes data in the given array x by the (vectorized) 2-norm
+
+    Parameters
+    ----------
+    x : array_like
+        The input to be normalized
+
+    Returns
+    -------
+    xn : array_like
+        A version of the input array that has been scaled so it has a unit vectorized 2-norm
 
     """
     return x / np.linalg.norm(x.ravel())
