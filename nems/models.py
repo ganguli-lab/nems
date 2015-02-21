@@ -11,9 +11,7 @@ recorded in an experiment. For more information, see the documentation (TODO: we
 Classes
 -------
 - `NeuralEncodingModel` -- A super class which contains methods that are common to all encoding models
-- `LNLN` -- A subclass of `NeuralEncodingModel` that fits two layer models consisting of alternating layers of linear
-    filtering and nonlinear thresholding operations. The parameters for the filter and nonlinearities of the first layer
-    are learned, while the linear filter and nonlinearity of the second layer are fixed.
+- `LNLN` -- A subclass of `NeuralEncodingModel` that fits two layer models consisting of alternating layers of linear filtering and nonlinear thresholding operations. The parameters for the filter and nonlinearities of the first layer are learned, while the linear filter and nonlinearity of the second layer are fixed.
 
 References
 ----------
@@ -219,7 +217,7 @@ class LNLN(NeuralEncodingModel):
         Examples
         --------
 
-        >>> model = LNLN(stim, rate, filter_dims, theta_init=None, minibatchSize=None)
+        >>> model = LNLN(stim, rate, filter_dims)
 
         Parameters
         ----------
@@ -386,6 +384,22 @@ class LNLN(NeuralEncodingModel):
         return obj_value, obj_gradient
 
     def fit(self, num_alt=2, num_steps=50, num_iter=5):
+        """
+        Runs an optimization algorithm to learn the parameters of the model given training data and regularizers
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+
+        Notes
+        -----
+        See the `proxalgs` module for more information on the optimization algorithm
+
+
+
+        """
 
         # grab the initial parameters
         Wk = self.theta_init['W'].copy()
@@ -449,42 +463,50 @@ class LNLN(NeuralEncodingModel):
 
         return results, Ws, fs, runtimes, evals
 
-    def metrics(self, theta, data):
+    def metrics(self, data_index):
         """
-        evaluate test metrics at given parameters
+        Evaluate metrics on a given minibatch.
 
-        res, rhat = test_metrics(self, theta, data)
+        Parameters
+        ----------
+        data_index : int
+            An index into the array of minibatches (`self.data`) the evaluate
 
-        :param theta:
-            dictionary of parameters to test
+        Returns
+        -------
+        metrics : dict
+            A dictionary whose keys are the names of metrics applied to evaluate the model parameters on the given
+            minibatch, and whose values are single numbers.
 
-        :param data:
-            dictionary of data parameters for a minibatch, data['stim'] and data['rate']
-
-        :return:
-            res: a tuple of metrics between the model and true firing rate.
-                 (correlation coefficient, neg. log likelihood objective, mean squared error)
-            rhat: the predicted model rate
+        See Also
+        --------
+        NeuralEncodingModel.test
+            The `test` function in the super class NeuralEncodingModel relies on the metrics function to return
+            aggregate statistics over all minibatches.
 
         """
 
-        logr, rhat = self._rate(theta, data['stim'])[-2:]
+        # compute the model firing rate
+        logr, rhat = self._rate(self.theta, self.data[data_index]['stim'])[-2:]
 
         # correlation coefficient
         cc = float(np.corrcoef(np.vstack((rhat, data['rate'])))[0, 1])
 
-        # relative log-likelihood, difference from mean rate model (bits per spike)
+        # log-likelihood improvement over a mean rate model (in bits per spike)
         mu = float(np.mean(data['rate'] * np.log(self.meanrate) - self.meanrate))
         fobj = (float(np.mean(data['rate'] * logr - rhat)) - mu) / (self.meanrate * np.log(2))
 
         # mean squared error
         mse = float(np.mean((rhat - data['rate']) ** 2))
 
-        return (cc, fobj, mse), rhat
+        return {'corrcoef': cc, 'log-likelihood improvement': fobj, 'mean squared error': mse}
 
     def _stim_gradient(self, stim):
         """
         Compute the model response and gradient with respect to the stimulus
+
+        .. warning:: Work in progress
+
         """
 
         u, z, zgrad, logr, r = self._rate(self.theta, stim)
