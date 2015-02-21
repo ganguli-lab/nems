@@ -30,6 +30,7 @@ from . import tentbasis
 from .sfo_admm import SFO
 from proxalgs.core import Optimizer
 from proxalgs import operators
+import pandas as pd
 
 # exports
 __all__ = ['NeuralEncodingModel', 'LNLN']
@@ -47,13 +48,14 @@ class NeuralEncodingModel(object):
         self.modeltype = str.lower(modeltype)
 
         # model properties
+        self.theta = None
         self.num_samples = rate.size
         self.tau = filter_dims[-1]
         self.filter_dims = filter_dims
         self.stim_dim = np.prod(filter_dims[:-1])
 
         # the length of the filter must be smaller than the length of the experiment
-        assert self.tau <= self.num_samples, 'The filter length (in time) must be smaller than the length of the experiment.'
+        assert self.tau <= self.num_samples, 'The temporal filter length must be less than the experiment length.'
 
         # filter dimensions must be (n1 x n2 x tau), while the stimulus dimensions should be (n1*n2 x t)
         assert stimulus.shape[0] == self.stim_dim, 'Stimulus size does not match up with filter dimensions'
@@ -69,7 +71,7 @@ class NeuralEncodingModel(object):
             num_minibatches = int(self.num_samples / minibatch_size)
 
         # slice the z-scored stimulus every tau samples, for easier dot products
-        slices = _rolling_window((stimulus-np.mean(stimulus))/np.std(stimulus), self.tau)
+        slices = _rolling_window((stimulus - np.mean(stimulus)) / np.std(stimulus), self.tau)
 
         # store stimulus and rate data for each minibatch in a list
         self.data = list()
@@ -109,20 +111,17 @@ class NeuralEncodingModel(object):
         # compute the mean firing rate
         self.meanrate = np.mean([np.mean(d['rate']) for d in self.data])
 
-
     def __str__(self):
         return "Neural encoding model, " + self.modeltype
-
 
     def _getsta(self):
         """
         Compute an STA
 
         """
-        T = float(self.data[0]['rate'].size)
-        stas = [np.tensordot(d['stim'], d['rate'], axes=([1], [0]))/T for d in self.data]
+        num_samples = float(self.data[0]['rate'].size)
+        stas = [np.tensordot(d['stim'], d['rate'], axes=([1], [0])) / num_samples for d in self.data]
         self.sta = np.mean(stas,axis=0).reshape(self.filter_dims)
-
 
     def add_regularizer(self, theta_key, proxfun, **kwargs):
         """
@@ -160,60 +159,55 @@ class NeuralEncodingModel(object):
         # add this proximal operator function to the list
         self.regularizers[theta_key].append(partial(wrapper, **kwargs))
 
-
-    def metrics(self):
-        """
-        Default metrics for evaluating models
-
-        .. warning:: Work in progress
-
-        Parameters
-        ----------
-
-        """
-
-
     def test(self):
         """
         Evaluate the model on held out data
 
-        .. warning:: Work in progress
+        Relies on the model subclass having a `metrics` method, which accepts an index into the data array and returns
+        a dictionary containing various metrics evaluated given the current value of the parameters (`theta`) on the
+        minibatch of data at the given index
+
+        Returns
+        -------
+        results : DataFrame
+            A pandas dataframe with the following columsn: the minibatch index, a 'train' or 'test' label, and any
+            keywords returned by the metrics function. Each row in the dataframe consists of the metrics evaluated
+            on a single minibatch of data.
+
+        stats : dict
+            Statistics on just the held out minibatches. Keys correspond to the keys in metrics, values are the average
+            computed over the test minibatches.
 
         Examples
         --------
         Given an initialized and trained instance of NeuralEncodingModel, you can test the model on
         held out data as follows:
 
-        >>> results = model.test()
-
-        Parameters
-        ----------
+        >>> results, avg = model.test()
 
         """
-        assert "metrics" in self.__dict__, "Model class must have a metrics() function to call when testing"
 
         results = list()
-        train_res = list()
-        test_res = list()
-        #
-        # for train_idx in self.train_indices:
-        #     tr = self.metrics(theta, self.data[train_idx])[0]
-        #     results.append((train_idx, 'train') + tr)
-        #     train_res.append(tr)
-        #
-        # for test_idx in self.test_indices:
-        #     tr = self.metrics(theta, self.data[test_idx])[0]
-        #     results.append((test_idx, 'test') + tr)
-        #     test_res.append(tr)
-        #
-        # num_train = float(len(self.train_indices))
-        # num_test = float(len(self.test_indices))
-        # avg = tuple(np.nanmean(np.vstack(train_res),      axis=0)) + \
-        #       tuple(np.nanmean(np.vstack(test_res),       axis=0))
-        # spread = tuple(np.nanstd(np.vstack(train_res),      axis=0) / np.sqrt(num_train)) + \
-        #          tuple(np.nanstd(np.vstack(test_res),       axis=0) / np.sqrt(num_test))
-        #
-        # return results, avg, spread
+        indices = list()
+        class_key = 'set'
+
+        # evaluate metrics on training data
+        for train_idx in self.train_indices:
+            results.append(self.metrics(self.data[train_idx]).update({class_key: 'train'}))
+            indices.append(train_idx)
+
+        # evaluate metrics on testing data
+        for test_idx in self.test_indices:
+            results.append(self.metrics(self.data[test_idx]).update({class_key: 'test'}))
+            indices.append(test_idx)
+
+        # create DataFrame to store results
+        df = pd.DataFrame(data=results, index=indices)
+
+        # compute the average over the test minibatches
+        avg = dict(df.loc[df[class_key] == 'test'].mean())
+
+        return df, avg
 
 
 class LNLN(NeuralEncodingModel):
@@ -280,7 +274,8 @@ class LNLN(NeuralEncodingModel):
         # initialize tent basis functions
         num_tent_samples = 1000
         tent_span = (-5,5)          # suitable for z-scored input
-        self.tentparams = tentbasis.build_tents(num_tent_samples, tent_span, num_tents, tent_type=tent_type, sigmasq=sigmasq)
+        self.tentparams = tentbasis.build_tents(num_tent_samples, tent_span, num_tents,
+                                                tent_type=tent_type, sigmasq=sigmasq)
 
         # initialize parameter dictionary
         self.theta_init = dict()
@@ -332,16 +327,15 @@ class LNLN(NeuralEncodingModel):
         # initialize regularizers
         self.regularizers = {'W': list(), 'f': list()}
 
-
-    def f_df(self, W, f, data, param_gradient=None):
+    def f_df(self, w, f, data, param_gradient=None):
         """
         Evaluate the negative log-likelihood objective and gradient for the LNLN model class
 
-        f, df = f_df(self, W, f, data)
+        f, df = f_df(self, w, f, data)
 
         Parameters
         ----------
-        W : array_like
+        w : array_like
             A numpy array containing parameter values for the first layer linear filters in the LNLN model
 
         f : array_like
@@ -351,7 +345,7 @@ class LNLN(NeuralEncodingModel):
             Dictionary containing two keys: `stim` and `rate`, each of which is a numpy array.
 
         param_gradient : string (optional, default=None)
-            A string indicating which parameters to compute the gradient for, either `W` or `f`
+            A string indicating which parameters to compute the gradient for, either `w` or `f`
 
         Returns
         -------
@@ -364,12 +358,12 @@ class LNLN(NeuralEncodingModel):
         """
 
         # f is (K,P)
-        # W is (K,N,tau)
-        k, n, tau = W.shape
+        # w is (K,N,tau)
+        k, n, tau = w.shape
         m = (data['rate'].size - tau + 1)
 
         # estimate firing rate and get model response
-        u, z, zgrad, logr, r = self._rate({'W': W, 'f': f}, data['stim'])
+        u, z, zgrad, logr, r = self._rate({'w': w, 'f': f}, data['stim'])
 
         # objective in bits (log-likelihood difference between model and mean firing rates)
         obj_value = np.mean(r - data['rate'] * logr)
@@ -378,7 +372,7 @@ class LNLN(NeuralEncodingModel):
         grad_factor = r - data['rate']  # dims: (M)
 
         # compute gradient
-        if param_gradient=='W':
+        if param_gradient == 'w':
             nonlin_proj = np.sum(f[:, np.newaxis, :] * zgrad, axis=2)  # dims: (K, M)
             weighted_proj = grad_factor[np.newaxis, :] * nonlin_proj  # dims: (K, M)
             obj_gradient = np.tensordot(weighted_proj, data['stim'], ([1], [1])) / float(m)
@@ -390,7 +384,6 @@ class LNLN(NeuralEncodingModel):
             obj_gradient = None
 
         return obj_value, obj_gradient
-
 
     def fit(self, num_alt=2, num_steps=50, num_iter=5):
 
@@ -456,9 +449,9 @@ class LNLN(NeuralEncodingModel):
 
         return results, Ws, fs, runtimes, evals
 
-
-    def test_metrics(self, theta, data):
-        """evaluate test metrics at given parameters
+    def metrics(self, theta, data):
+        """
+        evaluate test metrics at given parameters
 
         res, rhat = test_metrics(self, theta, data)
 
@@ -504,7 +497,7 @@ class LNLN(NeuralEncodingModel):
         # fgrad = np.tensordot(zgrad, self.theta['f'], ([0,2],[0,1]))
         # wgrad = np.tensordot(u, self.theta['W'],([0],[0]))
 
-        return r, xgrad*r
+        return r, xgrad * r
 
     def _rate(self, theta, stim):
         """
