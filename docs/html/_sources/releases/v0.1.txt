@@ -1,0 +1,20 @@
+v0.1 (Work in Progress)
+=======================
+
+Initial release!
+
+Sketched out the ``NeuralEncodingModel`` class and added a subclass, the ``LNLN`` class.
+
+API Overview
+------------
+- Functionality split between the ``NeuralEncodingModel`` class and its subclasses. I'm trying to keep things general
+to all encoding models in the ``NeuralEncodingModel`` class.
+- Build a subclass, the ``LNLN`` model class, that lets you fit two layer linear-nonlinear cascade models to data
+- Functions for dealing with tent basis functions (useful for fitting generic nonlinearities) are included in ``tentbasis.py``
+
+Roadmap
+-------
+- Add more model classes (e.g. an ``LN`` subclass)
+- Better tools for monitoring optimization progress, perhaps storing results in a database? (in ``datastore.py``)
+- Add tools to simulate data in ``simulate.py``
+- Better testing and documentation

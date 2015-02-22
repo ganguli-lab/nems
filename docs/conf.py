@@ -56,8 +56,6 @@ master_doc = 'index'
 project = u'nems'
 copyright = u'2015, Niru Maheswaranathan'
 
-numpydoc_show_class_members = False
-
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.

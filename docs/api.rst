@@ -4,14 +4,6 @@ API Reference
 
 .. py:currentmodule:: nems
 
-nems.datastore
---------------
-
-.. automodule:: nems.datastore
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 nems.models
 -----------
 
@@ -24,6 +16,14 @@ nems.objectives
 ---------------
 
 .. automodule:: nems.objectives
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+nems.tentbasis
+--------------
+
+.. automodule:: nems.tentbasis
     :members:
     :undoc-members:
     :show-inheritance:
@@ -44,10 +44,10 @@ nems.simulate
     :undoc-members:
     :show-inheritance:
 
-nems.tentbasis
+nems.datastore
 --------------
 
-.. automodule:: nems.tentbasis
+.. automodule:: nems.datastore
     :members:
     :undoc-members:
     :show-inheritance:

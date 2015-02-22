@@ -67,15 +67,18 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="api.html#module-nems.datastore">nems.datastore</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api.html#module-nems.models">nems.models</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api.html#module-nems.objectives">nems.objectives</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-nems.tentbasis">nems.tentbasis</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api.html#module-nems.sensitivity">nems.sensitivity</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api.html#module-nems.simulate">nems.simulate</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#module-nems.tentbasis">nems.tentbasis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-nems.datastore">nems.datastore</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#v0-1-work-in-progress">v0.1 (Work in Progress)</a></li>
+</ul>
+</li>
 </ul>
 
         
@@ -112,6 +115,15 @@
             
   <div class="section" id="neural-encoding-models">
 <h1>Neural Encoding Models<a class="headerlink" href="#neural-encoding-models" title="Permalink to this headline">¶</a></h1>
+<p>Neural encoding models are models that predict the neural response to an external stimulus. This package provides utilities
+for training (or fitting), testing, and visualizing neural encoding models.</p>
+<p>The starting point is the <tt class="docutils literal"><span class="pre">NeuralEncodingModel</span></tt> class and its subclasses. For example, the <tt class="docutils literal"><span class="pre">LNLN</span></tt> subclass takes in
+a set of data (stimuli and neural responses) and initializes a model object that can be used to fit parameters of a two-layer
+linear-nonlinear cascade model (LN-LN) to the given data, and test those parameters on a (randomly held-out) subset of the data.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This package is under active development. Please refer to these pages or the <a class="reference external" href="https://github.com/ganguli-lab/nems/">nems</a> Github repository for the latest updates.</p>
+</div>
 <p>Contents:</p>
 <div class="toctree-wrapper compound">
 <ul>
@@ -121,14 +133,14 @@
 <li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
 </ul>
 </div>
-</div>
 <div class="section" id="indices-and-tables">
-<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<h2>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
 <li><a class="reference internal" href="genindex.html"><em>Index</em></a></li>
 <li><a class="reference internal" href="py-modindex.html"><em>Module Index</em></a></li>
 <li><a class="reference internal" href="search.html"><em>Search Page</em></a></li>
 </ul>
+</div>
 </div>
 
 
