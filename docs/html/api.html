@@ -247,7 +247,6 @@ held out data as follows:</p>
 <dt id="nems.models.LNLN.f_df">
 <tt class="descname">f_df</tt><big>(</big><em>W</em>, <em>f</em>, <em>data</em>, <em>param_gradient=None</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#LNLN.f_df"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LNLN.f_df" title="Permalink to this definition">¶</a></dt>
 <dd><p>Evaluate the negative log-likelihood objective and gradient for the LNLN model class</p>
-<p>f, df = f_df(self, W, f, data)</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -282,6 +281,10 @@ held out data as follows:</p>
 </tr>
 </tbody>
 </table>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">f</span><span class="p">,</span> <span class="n">df</span> <span class="o">=</span> <span class="n">f_df</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="method">

@@ -326,11 +326,263 @@
         <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="n">avg</span>
 
 </div></div>
+<span class="k">class</span> <span class="nc">LN</span><span class="p">(</span><span class="n">NeuralEncodingModel</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stim</span><span class="p">,</span> <span class="n">rate</span><span class="p">,</span> <span class="n">filter_dims</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">frac_train</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span> <span class="n">num_tents</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">sigmasq</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+                 <span class="n">tent_type</span><span class="o">=</span><span class="s">&#39;gaussian&#39;</span><span class="p">,</span> <span class="n">spikes</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        A linear-nonlinear model</span>
+
+<span class="sd">        The predicted firing rate is determined by filtering the stimulus with a spatiotemporal filter,</span>
+<span class="sd">        and then passing that filtered signal through a nonlinearity (parameterized using tent basis functions)</span>
+
+<span class="sd">        The objective used to fit the parameters is a mean squared error, so the model can predict negative values</span>
+<span class="sd">        (unlike the LNLN class, which enforces a final exponential nonlinearity)</span>
+
+<span class="sd">        .. warning:: Has not been tested yet</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        stim : array_like</span>
+
+<span class="sd">        rate : array_like</span>
+
+<span class="sd">        filter_dims : tuple</span>
+
+<span class="sd">        minibatch_size : int, optional</span>
+
+<span class="sd">        frac_train : float, optional</span>
+
+<span class="sd">        spikes : array_like, optional</span>
+
+<span class="sd">        Other Parameters</span>
+<span class="sd">        ----------------</span>
+<span class="sd">        num_tents : int, optional</span>
+
+<span class="sd">        sigmasq : float, optional</span>
+
+<span class="sd">        tent_type : string, optional</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c"># initialize the model object</span>
+        <span class="n">NeuralEncodingModel</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&#39;lnln_exp&#39;</span><span class="p">,</span> <span class="n">stim</span><span class="p">,</span> <span class="n">rate</span><span class="p">,</span> <span class="n">filter_dims</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="p">,</span>
+                                     <span class="n">frac_train</span><span class="o">=</span><span class="n">frac_train</span><span class="p">,</span> <span class="n">spikes</span><span class="o">=</span><span class="n">spikes</span><span class="p">)</span>
+
+        <span class="c"># initialize tent basis functions</span>
+        <span class="n">num_tent_samples</span> <span class="o">=</span> <span class="mi">1000</span>
+        <span class="n">tent_span</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>  <span class="c"># suitable for z-scored input</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tentparams</span> <span class="o">=</span> <span class="n">tentbasis</span><span class="o">.</span><span class="n">build_tents</span><span class="p">(</span><span class="n">num_tent_samples</span><span class="p">,</span> <span class="n">tent_span</span><span class="p">,</span> <span class="n">num_tents</span><span class="p">,</span>
+                                                <span class="n">tent_type</span><span class="o">=</span><span class="n">tent_type</span><span class="p">,</span> <span class="n">sigmasq</span><span class="o">=</span><span class="n">sigmasq</span><span class="p">)</span>
+
+        <span class="c"># initialize parameter dictionary</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">theta_init</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">theta_init</span><span class="p">[</span><span class="s">&#39;W&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,)</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stim_dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">theta_init</span><span class="p">[</span><span class="s">&#39;f&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;num_tents&#39;</span><span class="p">]))</span>
+
+        <span class="c"># initialize filter parameters</span>
+        <span class="k">if</span> <span class="s">&#39;W&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+
+            <span class="c"># ensure dimensions are consistent</span>
+            <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">theta_init</span><span class="p">[</span><span class="s">&#39;W&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;W&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="s">&quot;Shape of the filters (`W` keyword argument) &quot;</span> \
+                                                                    <span class="s">&quot;are inconsistent with the given filter dimensions.&quot;</span>
+
+            <span class="c"># normalize the given filters</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">theta_init</span><span class="p">[</span><span class="s">&#39;W&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">_nrm</span><span class="p">(</span><span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;W&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="c"># initialize with the STA</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">theta_init</span><span class="p">[</span><span class="s">&#39;W&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">_nrm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sta</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sta</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="c"># initialize nonlinearity parameters</span>
+        <span class="k">if</span> <span class="s">&#39;f&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+
+            <span class="c"># ensure dimensions are consistent</span>
+            <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">theta_init</span><span class="p">[</span><span class="s">&#39;f&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;f&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="s">&quot;Shape of the nonlinearity parameters&quot;</span> \
+                                                                    <span class="s">&quot; (`f` keyword argument) are inconsistent with &quot;</span> \
+                                                                    <span class="s">&quot;the number of tent basis functions.&quot;</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">theta_init</span><span class="p">[</span><span class="s">&#39;f&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;f&#39;</span><span class="p">]</span>
+
+        <span class="c"># initialize the nonlinearity to be linear</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;tent_span&#39;</span><span class="p">]</span>
+            <span class="n">nonlin_init</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">ts</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ts</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;num_tent_samples&#39;</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">theta_init</span><span class="p">[</span><span class="s">&#39;f&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">lstsq</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tentparams</span><span class="p">[</span><span class="s">&#39;Phi&#39;</span><span class="p">],</span> <span class="n">nonlin_init</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c"># initialize regularizers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">regularizers</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;W&#39;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(),</span> <span class="s">&#39;f&#39;</span><span class="p">:</span> <span class="nb">list</span><span class="p">()}</span>
+
+    <span class="k">def</span> <span class="nf">f_df</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">param_gradient</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Objective and gradient for fitting the LN model</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        W : array_like</span>
+<span class="sd">        f : array_like</span>
+<span class="sd">        data : dict</span>
+<span class="sd">        param_gradient : string, optional</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        obj_value : float</span>
+<span class="sd">        obj_gradient : array_like</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c"># compute the model rate</span>
+        <span class="n">u</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">zgrad</span><span class="p">,</span> <span class="n">logr</span><span class="p">,</span> <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rate</span><span class="p">({</span><span class="s">&#39;W&#39;</span><span class="p">:</span> <span class="n">W</span><span class="p">,</span> <span class="s">&#39;f&#39;</span><span class="p">:</span> <span class="n">f</span><span class="p">},</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;stim&#39;</span><span class="p">])</span>
+
+        <span class="c"># main objective (gaussian log-likelihood)</span>
+        <span class="n">rdiff</span> <span class="o">=</span> <span class="n">r</span> <span class="o">-</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;rate&#39;</span><span class="p">]</span>
+        <span class="n">obj_value</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">rdiff</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+
+        <span class="c"># gradient wrt. filter</span>
+        <span class="k">if</span> <span class="n">param_gradient</span> <span class="o">==</span> <span class="s">&#39;W&#39;</span><span class="p">:</span>
+            <span class="n">nonlin_proj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">f</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">zgrad</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>  <span class="c"># dims: (K, M)</span>
+            <span class="n">weighted_proj</span> <span class="o">=</span> <span class="n">rdiff</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">nonlin_proj</span>  <span class="c"># dims: (K, M)</span>
+            <span class="n">obj_gradient</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tensordot</span><span class="p">(</span><span class="n">weighted_proj</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;stim&#39;</span><span class="p">],</span> <span class="p">([</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">]))</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+
+        <span class="c"># gradient wrt. nonlinearity</span>
+        <span class="k">elif</span> <span class="n">param_gradient</span> <span class="o">==</span> <span class="s">&#39;f&#39;</span><span class="p">:</span>
+            <span class="n">obj_gradient</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tensordot</span><span class="p">(</span><span class="n">rdiff</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">]))</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+
+        <span class="c"># no gradient required</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">obj_gradient</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="k">return</span> <span class="n">obj_value</span><span class="p">,</span> <span class="n">obj_gradient</span>
+
+    <span class="k">def</span> <span class="nf">metrics</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_index</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Evaluate metrics on a given minibatch</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c"># compute the firing rate</span>
+        <span class="n">rhat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">theta</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">data_index</span><span class="p">][</span><span class="s">&#39;stim&#39;</span><span class="p">])</span>
+        <span class="n">rtrue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">data_index</span><span class="p">][</span><span class="s">&#39;rate&#39;</span><span class="p">]</span>
+
+        <span class="c"># mean squared error</span>
+        <span class="n">mse</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">((</span><span class="n">rhat</span><span class="o">-</span><span class="n">rtrue</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+
+        <span class="c"># correlation coefficient</span>
+        <span class="n">cc</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">corrcoef</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">rhat</span><span class="p">,</span> <span class="n">rtrue</span><span class="p">)))[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;correlation coefficient&#39;</span><span class="p">:</span> <span class="n">cc</span><span class="p">,</span> <span class="s">&#39;mean squared error&#39;</span><span class="p">:</span> <span class="n">mse</span><span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">_rate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">stim</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the model response given parameters</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        theta : dict</span>
+<span class="sd">        stim : array_like</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        u : array_like</span>
+<span class="sd">        z : array_like</span>
+<span class="sd">        zgrad : array_like</span>
+<span class="sd">        logr : array_like</span>
+<span class="sd">        r : array_like</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c"># filter projection</span>
+        <span class="n">u</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tensordot</span><span class="p">(</span><span class="n">theta</span><span class="p">[</span><span class="s">&#39;W&#39;</span><span class="p">],</span> <span class="n">stim</span><span class="p">,</span> <span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]))</span>    <span class="c"># dims: (K x M)</span>
+
+        <span class="c"># evaluate the input at the tent basis function</span>
+        <span class="n">z</span><span class="p">,</span> <span class="n">zgrad</span> <span class="o">=</span> <span class="n">tentbasis</span><span class="o">.</span><span class="n">eval_tents</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tentparams</span><span class="p">)</span>
+
+        <span class="c"># compute the firing rate</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tensordot</span><span class="p">(</span><span class="n">theta</span><span class="p">[</span><span class="s">&#39;f&#39;</span><span class="p">],</span> <span class="n">z</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]))</span>
+        <span class="n">logr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">u</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">zgrad</span><span class="p">,</span> <span class="n">logr</span><span class="p">,</span> <span class="n">r</span>
+
+    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Runs an optimization algorithm to learn the parameters of the model given training data and regularizers</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        num_alt : int, optional</span>
+<span class="sd">            The number of times to alternate between optimizing nonlinearities and optimizing filters. Default: 2</span>
+
+<span class="sd">        max_iter : int, optional</span>
+<span class="sd">            The maximum number of steps to take during each leg of the alternating minimization. Default: 25</span>
+
+<span class="sd">        num_likelihood_steps : int, optional</span>
+<span class="sd">            The number of steps to take when optimizing the data likelihood term (using SFO)</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        See the `proxalgs` module for more information on the optimization algorithm</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c"># grab the initial parameters</span>
+        <span class="n">theta_current</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;W&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">theta_init</span><span class="p">[</span><span class="s">&#39;W&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="s">&#39;f&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">theta_init</span><span class="p">[</span><span class="s">&#39;f&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()}</span>
+
+        <span class="c"># get list of training data</span>
+        <span class="n">train_data</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_indices</span><span class="p">]</span>
+
+        <span class="c"># runs the optimization procedure for one set of parameters (a single leg of the alternating minimization)</span>
+        <span class="k">def</span> <span class="nf">optimize_param</span><span class="p">(</span><span class="n">f_df_wrapper</span><span class="p">,</span> <span class="n">param_key</span><span class="p">):</span>
+
+            <span class="c"># initialize the optimizer object</span>
+            <span class="n">opt</span> <span class="o">=</span> <span class="n">Optimizer</span><span class="p">(</span><span class="s">&#39;sfo&#39;</span><span class="p">,</span> <span class="n">optimizer</span><span class="o">=</span><span class="n">SFO</span><span class="p">(</span><span class="n">f_df_wrapper</span><span class="p">,</span> <span class="n">theta_current</span><span class="p">[</span><span class="n">param_key</span><span class="p">],</span> <span class="n">train_data</span><span class="p">,</span> <span class="n">display</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+                            <span class="n">num_steps</span><span class="o">=</span><span class="n">num_likelihood_steps</span><span class="p">)</span>
+
+            <span class="c"># add regularization terms</span>
+            <span class="p">[</span><span class="n">opt</span><span class="o">.</span><span class="n">add_regularizer</span><span class="p">(</span><span class="n">reg</span><span class="p">)</span> <span class="k">for</span> <span class="n">reg</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">regularizers</span><span class="p">[</span><span class="n">param_key</span><span class="p">]]</span>
+
+            <span class="c"># run the optimization procedure</span>
+            <span class="k">return</span> <span class="n">opt</span><span class="o">.</span><span class="n">minimize</span><span class="p">(</span><span class="n">theta_current</span><span class="p">[</span><span class="n">param_key</span><span class="p">],</span> <span class="n">max_iter</span><span class="o">=</span><span class="n">max_iter</span><span class="p">,</span> <span class="n">disp</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+        <span class="c"># alternating optimization: switch between optimizing nonlinearities, and optimizing filters</span>
+        <span class="k">for</span> <span class="n">alt_iter</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_alt</span><span class="p">):</span>
+
+            <span class="c"># Fit nonlinearity</span>
+            <span class="c"># wrapper for the objective and gradient</span>
+            <span class="k">def</span> <span class="nf">f_df_wrapper</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">d</span><span class="p">):</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">f_df</span><span class="p">(</span><span class="n">theta_current</span><span class="p">[</span><span class="s">&#39;W&#39;</span><span class="p">],</span> <span class="n">f</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">param_gradient</span><span class="o">=</span><span class="s">&#39;f&#39;</span><span class="p">)</span>
+
+            <span class="c"># run the optimization procedure for this parameter</span>
+            <span class="n">theta_current</span><span class="p">[</span><span class="s">&#39;f&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">optimize_param</span><span class="p">(</span><span class="n">f_df_wrapper</span><span class="p">,</span> <span class="s">&#39;f&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+            <span class="c"># Fit filters</span>
+            <span class="c"># wrapper for the objective and gradient</span>
+            <span class="k">def</span> <span class="nf">f_df_wrapper</span><span class="p">(</span><span class="n">W</span><span class="p">,</span> <span class="n">d</span><span class="p">):</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">f_df</span><span class="p">(</span><span class="n">W</span><span class="p">,</span> <span class="n">theta_current</span><span class="p">[</span><span class="s">&#39;f&#39;</span><span class="p">],</span> <span class="n">d</span><span class="p">,</span> <span class="n">param_gradient</span><span class="o">=</span><span class="s">&#39;W&#39;</span><span class="p">)</span>
+
+            <span class="c"># run the optimization procedure for this parameter</span>
+            <span class="n">Wk</span> <span class="o">=</span> <span class="n">optimize_param</span><span class="p">(</span><span class="n">f_df_wrapper</span><span class="p">,</span> <span class="s">&#39;W&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+            <span class="c"># normalize filter</span>
+            <span class="n">theta_current</span><span class="p">[</span><span class="s">&#39;W&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">_nrm</span><span class="p">(</span><span class="n">Wk</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="c"># store learned parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">theta</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">theta_current</span><span class="p">)</span>
+
+
 <div class="viewcode-block" id="LNLN"><a class="viewcode-back" href="../../api.html#nems.models.LNLN">[docs]</a><span class="k">class</span> <span class="nc">LNLN</span><span class="p">(</span><span class="n">NeuralEncodingModel</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stim</span><span class="p">,</span> <span class="n">rate</span><span class="p">,</span> <span class="n">filter_dims</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">frac_train</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span> <span class="n">num_subunits</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
                  <span class="n">num_tents</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">sigmasq</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">tent_type</span><span class="o">=</span><span class="s">&#39;gaussian&#39;</span><span class="p">,</span> <span class="n">spikes</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initializes a two layer cascade (LNLN) model</span>
+<span class="sd">        Initializes a two layer cascade linear-nonlinear (LNLN) model</span>
+
+<span class="sd">        The model consists of:</span>
+<span class="sd">        - an initial stage of k different spatiotemporal filters</span>
+<span class="sd">        - these filtered signals pass through a set of k nonlinearities</span>
+<span class="sd">        - the output from the k nonlinearities are then summed and passed through an exponential to predict the firing rate</span>
+
+<span class="sd">        The learned parameters include the k first layer spatiotemporal filters and k nonlinearity parameters.</span>
+<span class="sd">        The nonlinearities are parameterized using a set of tent basis functions</span>
+
+<span class="sd">        If k (the number of subunits) is set to 1, the model reduces to a variant of the LN model.</span>
 
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
@@ -446,7 +698,9 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Evaluate the negative log-likelihood objective and gradient for the LNLN model class</span>
 
-<span class="sd">        f, df = f_df(self, W, f, data)</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; f, df = f_df(self, W, f, data)</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -560,8 +814,8 @@
             <span class="n">Wk</span> <span class="o">=</span> <span class="n">optimize_param</span><span class="p">(</span><span class="n">f_df_wrapper</span><span class="p">,</span> <span class="s">&#39;W&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 
             <span class="c"># normalize filters</span>
-            <span class="k">for</span> <span class="n">fi</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">Wk</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
-                <span class="n">Wk</span><span class="p">[</span><span class="n">fi</span><span class="p">]</span> <span class="o">=</span> <span class="n">_nrm</span><span class="p">(</span><span class="n">Wk</span><span class="p">[</span><span class="n">fi</span><span class="p">])</span>
+            <span class="k">for</span> <span class="n">filter_index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">Wk</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                <span class="n">theta_current</span><span class="p">[</span><span class="s">&#39;W&#39;</span><span class="p">][</span><span class="n">filter_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">_nrm</span><span class="p">(</span><span class="n">Wk</span><span class="p">[</span><span class="n">filter_index</span><span class="p">])</span>
 
         <span class="c"># store learned parameters</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">theta</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">theta_current</span><span class="p">)</span>
