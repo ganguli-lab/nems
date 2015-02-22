@@ -383,85 +383,71 @@ class LNLN(NeuralEncodingModel):
 
         return obj_value, obj_gradient
 
-    def fit(self, num_alt=2, num_steps=50, num_iter=5):
+    def fit(self, num_alt=2, max_iter=25, num_likelihood_steps=50):
         """
         Runs an optimization algorithm to learn the parameters of the model given training data and regularizers
 
         Parameters
         ----------
+        num_alt : int, optional
+            The number of times to alternate between optimizing nonlinearities and optimizing filters. Default: 2
 
-        Returns
-        -------
+        max_iter : int, optional
+            The maximum number of steps to take during each leg of the alternating minimization. Default: 25
+
+        num_likelihood_steps : int, optional
+            The number of steps to take when optimizing the data likelihood term (using SFO)
 
         Notes
         -----
         See the `proxalgs` module for more information on the optimization algorithm
 
-
-
         """
 
         # grab the initial parameters
-        Wk = self.theta_init['W'].copy()
-        fk = self.theta_init['f'].copy()
+        theta_current = {'W': self.theta_init['W'].copy(), 'f': self.theta_init['f'].copy()}
 
         # get list of training data
         train_data = [self.data[idx] for idx in self.train_indices]
 
-        # store optimization results and parameters
-        results = list()
-        Ws = [Wk]
-        fs = [fk]
+        # runs the optimization procedure for one set of parameters (a single leg of the alternating minimization)
+        def optimize_param(f_df_wrapper, param_key):
 
-        # runtime
-        self.tinit = time.time()
-        self.theta_temp = copy.deepcopy(self.theta_init)
-        runtimes = list()
-        evals = list()
+            # initialize the optimizer object
+            opt = Optimizer('sfo', optimizer=SFO(f_df_wrapper, theta_current[param_key], train_data, display=1),
+                            num_steps=num_likelihood_steps)
 
-        # not being used right now
-        def callback_func(mu, res):
-            if mu.ndim == 3:
-                self.theta_temp['W'] = mu.copy()
-            else:
-                self.theta_temp['f'] = mu.copy()
-            runtimes.append(time.time() - self.tinit)
-            # evals.append(self.test(self.theta_temp)[1])
-            self.tinit = time.time()
+            # add regularization terms
+            [opt.add_regularizer(reg) for reg in self.regularizers[param_key]]
 
-        # alternating optimization
+            # run the optimization procedure
+            return opt.minimize(theta_current[param_key], max_iter=max_iter)
+
+        # alternating optimization: switch between optimizing nonlinearities, and optimizing filters
         for alt_iter in range(num_alt):
 
             # Fit nonlinearity
-            # initialize the optimizer for the nonlinearity
+            # wrapper for the objective and gradient
             def f_df_wrapper(f, d):
                 return self.f_df(Wk, f, d, param_gradient='f')
 
-            opt = Optimizer('sfo', optimizer=SFO(f_df_wrapper, fk, train_data, display=1), num_steps=num_steps)
-            # TODO: FIX REGULARIZERS!
-            # opt.add_regularizer()
-            fk = opt.minimize(fk)
-            fs.append(fk)
-            results.append(opt.results)
+            # run the optimization procedure for this parameter
+            theta_current['f'] = optimize_param(f_df_wrapper, 'f').copy()
 
             # Fit filters
-            # initialize the optimizer for the filters
+            # wrapper for the objective and gradient
             def f_df_wrapper(W, d):
                 return self.f_df(W, fk, d, param_gradient='W')
 
-            opt = Optimizer('sfo', optimizer=SFO(f_df_wrapper, Wk, train_data, display=1), num_steps=num_steps)
-            # TODO: FIX REGULARIZERS!
-            # opt.add_regularizer()
-            Wk = opt.minimize(Wk)
+            # run the optimization procedure for this parameter
+            Wk = optimize_param(f_df_wrapper, 'W').copy()
+
+            # normalize filters
             for fi in range(Wk.shape[0]):
-                Wk[fi] = _nrm(Wk[fi])   # normalize filters
-            Ws.append(Wk)
-            results.append(opt.results)
+                Wk[fi] = _nrm(Wk[fi])
 
         # store learned parameters
-        self.theta = {'W': Wk, 'f': fk}
-
-        return results, Ws, fs, runtimes, evals
+        self.theta = copy.deepcopy(theta_current)
 
     def metrics(self, data_index):
         """
