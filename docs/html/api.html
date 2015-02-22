@@ -128,6 +128,7 @@ recorded in an experiment. For more information, see the documentation (TODO: we
 <ul class="simple">
 <li><cite>NeuralEncodingModel</cite> &#8211; A super class which contains methods that are common to all encoding models</li>
 <li><cite>LNLN</cite> &#8211; A subclass of <cite>NeuralEncodingModel</cite> that fits two layer models consisting of alternating layers of linear filtering and nonlinear thresholding operations. The parameters for the filter and nonlinearities of the first layer are learned, while the linear filter and nonlinearity of the second layer are fixed.</li>
+<li><cite>LN</cite> &#8211; A subclass of <cite>NeuralEncodingModel</cite> that fits linear-nonlinear (LN) models using a Gaussian log-likelihood.</li>
 </ul>
 </div>
 <div class="section" id="references">
@@ -345,6 +346,92 @@ minibatch, and whose values are single numbers.</p>
 <dd>The <cite>test</cite> function in the super class NeuralEncodingModel relies on the metrics function to return aggregate statistics over all minibatches.</dd>
 </dl>
 </div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="nems.models.LN">
+<em class="property">class </em><tt class="descclassname">nems.models.</tt><tt class="descname">LN</tt><big>(</big><em>stim</em>, <em>rate</em>, <em>filter_dims</em>, <em>minibatch_size=None</em>, <em>frac_train=0.8</em>, <em>num_tents=30</em>, <em>sigmasq=0.2</em>, <em>tent_type='gaussian'</em>, <em>spikes=None</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#LN"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LN" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#nems.models.NeuralEncodingModel" title="nems.models.NeuralEncodingModel"><tt class="xref py py-class docutils literal"><span class="pre">nems.models.NeuralEncodingModel</span></tt></a></p>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">add_regularizer</span></tt>(theta_key,&nbsp;proxfun,&nbsp;**kwargs)</td>
+<td>Add a proximal operator / objective to the objective, using the proxalgs package</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#nems.models.LN.f_df" title="nems.models.LN.f_df"><tt class="xref py py-obj docutils literal"><span class="pre">f_df</span></tt></a>(W,&nbsp;f,&nbsp;data[,&nbsp;param_gradient])</td>
+<td>Objective and gradient for fitting the LN model</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#nems.models.LN.fit" title="nems.models.LN.fit"><tt class="xref py py-obj docutils literal"><span class="pre">fit</span></tt></a>()</td>
+<td>Runs an optimization algorithm to learn the parameters of the model given training data and regularizers</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#nems.models.LN.metrics" title="nems.models.LN.metrics"><tt class="xref py py-obj docutils literal"><span class="pre">metrics</span></tt></a>(data_index)</td>
+<td>Evaluate metrics on a given minibatch</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">test</span></tt>()</td>
+<td>Evaluate the model on held out data</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="nems.models.LN.f_df">
+<tt class="descname">f_df</tt><big>(</big><em>W</em>, <em>f</em>, <em>data</em>, <em>param_gradient=None</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#LN.f_df"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LN.f_df" title="Permalink to this definition">¶</a></dt>
+<dd><p>Objective and gradient for fitting the LN model</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>W</strong> : array_like</p>
+<p><strong>f</strong> : array_like</p>
+<p><strong>data</strong> : dict</p>
+<p><strong>param_gradient</strong> : string, optional</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>obj_value</strong> : float</p>
+<p class="last"><strong>obj_gradient</strong> : array_like</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="nems.models.LN.fit">
+<tt class="descname">fit</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/nems/models.html#LN.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LN.fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Runs an optimization algorithm to learn the parameters of the model given training data and regularizers</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>num_alt</strong> : int, optional</p>
+<blockquote>
+<div><p>The number of times to alternate between optimizing nonlinearities and optimizing filters. Default: 2</p>
+</div></blockquote>
+<p><strong>max_iter</strong> : int, optional</p>
+<blockquote>
+<div><p>The maximum number of steps to take during each leg of the alternating minimization. Default: 25</p>
+</div></blockquote>
+<p><strong>num_likelihood_steps</strong> : int, optional</p>
+<blockquote class="last">
+<div><p>The number of steps to take when optimizing the data likelihood term (using SFO)</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>See the <cite>proxalgs</cite> module for more information on the optimization algorithm</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="nems.models.LN.metrics">
+<tt class="descname">metrics</tt><big>(</big><em>data_index</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#LN.metrics"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LN.metrics" title="Permalink to this definition">¶</a></dt>
+<dd><p>Evaluate metrics on a given minibatch</p>
 </dd></dl>
 
 </dd></dl>

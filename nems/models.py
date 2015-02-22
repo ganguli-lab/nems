@@ -12,6 +12,7 @@ Classes
 -------
 - `NeuralEncodingModel` -- A super class which contains methods that are common to all encoding models
 - `LNLN` -- A subclass of `NeuralEncodingModel` that fits two layer models consisting of alternating layers of linear filtering and nonlinear thresholding operations. The parameters for the filter and nonlinearities of the first layer are learned, while the linear filter and nonlinearity of the second layer are fixed.
+- `LN` -- A subclass of `NeuralEncodingModel` that fits linear-nonlinear (LN) models using a Gaussian log-likelihood.
 
 References
 ----------
@@ -31,7 +32,7 @@ from proxalgs import operators
 import pandas as pd
 
 # exports
-__all__ = ['NeuralEncodingModel', 'LNLN']
+__all__ = ['NeuralEncodingModel', 'LNLN', 'LN']
 
 
 class NeuralEncodingModel(object):

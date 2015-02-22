@@ -128,6 +128,7 @@
 <span class="sd">-------</span>
 <span class="sd">- `NeuralEncodingModel` -- A super class which contains methods that are common to all encoding models</span>
 <span class="sd">- `LNLN` -- A subclass of `NeuralEncodingModel` that fits two layer models consisting of alternating layers of linear filtering and nonlinear thresholding operations. The parameters for the filter and nonlinearities of the first layer are learned, while the linear filter and nonlinearity of the second layer are fixed.</span>
+<span class="sd">- `LN` -- A subclass of `NeuralEncodingModel` that fits linear-nonlinear (LN) models using a Gaussian log-likelihood.</span>
 
 <span class="sd">References</span>
 <span class="sd">----------</span>
@@ -147,7 +148,7 @@
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
 
 <span class="c"># exports</span>
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;NeuralEncodingModel&#39;</span><span class="p">,</span> <span class="s">&#39;LNLN&#39;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;NeuralEncodingModel&#39;</span><span class="p">,</span> <span class="s">&#39;LNLN&#39;</span><span class="p">,</span> <span class="s">&#39;LN&#39;</span><span class="p">]</span>
 
 
 <div class="viewcode-block" id="NeuralEncodingModel"><a class="viewcode-back" href="../../api.html#nems.models.NeuralEncodingModel">[docs]</a><span class="k">class</span> <span class="nc">NeuralEncodingModel</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
@@ -326,7 +327,7 @@
         <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="n">avg</span>
 
 </div></div>
-<span class="k">class</span> <span class="nc">LN</span><span class="p">(</span><span class="n">NeuralEncodingModel</span><span class="p">):</span>
+<div class="viewcode-block" id="LN"><a class="viewcode-back" href="../../api.html#nems.models.LN">[docs]</a><span class="k">class</span> <span class="nc">LN</span><span class="p">(</span><span class="n">NeuralEncodingModel</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stim</span><span class="p">,</span> <span class="n">rate</span><span class="p">,</span> <span class="n">filter_dims</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">frac_train</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span> <span class="n">num_tents</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">sigmasq</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
                  <span class="n">tent_type</span><span class="o">=</span><span class="s">&#39;gaussian&#39;</span><span class="p">,</span> <span class="n">spikes</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -412,7 +413,7 @@
         <span class="c"># initialize regularizers</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">regularizers</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;W&#39;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(),</span> <span class="s">&#39;f&#39;</span><span class="p">:</span> <span class="nb">list</span><span class="p">()}</span>
 
-    <span class="k">def</span> <span class="nf">f_df</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">param_gradient</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="LN.f_df"><a class="viewcode-back" href="../../api.html#nems.models.LN.f_df">[docs]</a>    <span class="k">def</span> <span class="nf">f_df</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">param_gradient</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Objective and gradient for fitting the LN model</span>
 
@@ -452,8 +453,8 @@
             <span class="n">obj_gradient</span> <span class="o">=</span> <span class="bp">None</span>
 
         <span class="k">return</span> <span class="n">obj_value</span><span class="p">,</span> <span class="n">obj_gradient</span>
-
-    <span class="k">def</span> <span class="nf">metrics</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_index</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="LN.metrics"><a class="viewcode-back" href="../../api.html#nems.models.LN.metrics">[docs]</a>    <span class="k">def</span> <span class="nf">metrics</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_index</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Evaluate metrics on a given minibatch</span>
 
@@ -470,7 +471,7 @@
         <span class="n">cc</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">corrcoef</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">rhat</span><span class="p">,</span> <span class="n">rtrue</span><span class="p">)))[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
 
         <span class="k">return</span> <span class="p">{</span><span class="s">&#39;correlation coefficient&#39;</span><span class="p">:</span> <span class="n">cc</span><span class="p">,</span> <span class="s">&#39;mean squared error&#39;</span><span class="p">:</span> <span class="n">mse</span><span class="p">}</span>
-
+</div>
     <span class="k">def</span> <span class="nf">_rate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">stim</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Compute the model response given parameters</span>
@@ -502,7 +503,7 @@
 
         <span class="k">return</span> <span class="n">u</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">zgrad</span><span class="p">,</span> <span class="n">logr</span><span class="p">,</span> <span class="n">r</span>
 
-    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="LN.fit"><a class="viewcode-back" href="../../api.html#nems.models.LN.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Runs an optimization algorithm to learn the parameters of the model given training data and regularizers</span>
 
@@ -567,7 +568,7 @@
         <span class="c"># store learned parameters</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">theta</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">theta_current</span><span class="p">)</span>
 
-
+</div></div>
 <div class="viewcode-block" id="LNLN"><a class="viewcode-back" href="../../api.html#nems.models.LNLN">[docs]</a><span class="k">class</span> <span class="nc">LNLN</span><span class="p">(</span><span class="n">NeuralEncodingModel</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stim</span><span class="p">,</span> <span class="n">rate</span><span class="p">,</span> <span class="n">filter_dims</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">frac_train</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span> <span class="n">num_subunits</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
                  <span class="n">num_tents</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">sigmasq</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">tent_type</span><span class="o">=</span><span class="s">&#39;gaussian&#39;</span><span class="p">,</span> <span class="n">spikes</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
