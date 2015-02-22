@@ -229,7 +229,7 @@ held out data as follows:</p>
 <tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">add_regularizer</span></tt>(theta_key,&nbsp;proxfun,&nbsp;**kwargs)</td>
 <td>Add a proximal operator / objective to the objective, using the proxalgs package</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#nems.models.LNLN.f_df" title="nems.models.LNLN.f_df"><tt class="xref py py-obj docutils literal"><span class="pre">f_df</span></tt></a>(w,&nbsp;f,&nbsp;data[,&nbsp;param_gradient])</td>
+<tr class="row-even"><td><a class="reference internal" href="#nems.models.LNLN.f_df" title="nems.models.LNLN.f_df"><tt class="xref py py-obj docutils literal"><span class="pre">f_df</span></tt></a>(W,&nbsp;f,&nbsp;data[,&nbsp;param_gradient])</td>
 <td>Evaluate the negative log-likelihood objective and gradient for the LNLN model class</td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#nems.models.LNLN.fit" title="nems.models.LNLN.fit"><tt class="xref py py-obj docutils literal"><span class="pre">fit</span></tt></a>([num_alt,&nbsp;max_iter,&nbsp;num_likelihood_steps])</td>
@@ -245,14 +245,14 @@ held out data as follows:</p>
 </table>
 <dl class="method">
 <dt id="nems.models.LNLN.f_df">
-<tt class="descname">f_df</tt><big>(</big><em>w</em>, <em>f</em>, <em>data</em>, <em>param_gradient=None</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#LNLN.f_df"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LNLN.f_df" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">f_df</tt><big>(</big><em>W</em>, <em>f</em>, <em>data</em>, <em>param_gradient=None</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#LNLN.f_df"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LNLN.f_df" title="Permalink to this definition">¶</a></dt>
 <dd><p>Evaluate the negative log-likelihood objective and gradient for the LNLN model class</p>
-<p>f, df = f_df(self, w, f, data)</p>
+<p>f, df = f_df(self, W, f, data)</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>w</strong> : array_like</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>W</strong> : array_like</p>
 <blockquote>
 <div><p>A numpy array containing parameter values for the first layer linear filters in the LNLN model</p>
 </div></blockquote>
@@ -266,7 +266,7 @@ held out data as follows:</p>
 </div></blockquote>
 <p><strong>param_gradient</strong> : string (optional, default=None)</p>
 <blockquote>
-<div><p>A string indicating which parameters to compute the gradient for, either <cite>w</cite> or <cite>f</cite></p>
+<div><p>A string indicating which parameters to compute the gradient for, either <cite>W</cite> or <cite>f</cite></p>
 </div></blockquote>
 </td>
 </tr>

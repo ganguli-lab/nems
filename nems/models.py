@@ -62,7 +62,8 @@ class NeuralEncodingModel(object):
         if minibatch_size is None:
 
             # choose number of minibatches as sqrt(T)/10
-            minibatch_size = np.ceil(0.1 * np.sqrt(self.num_samples)).astype('int')
+            # minibatch_size = np.ceil(0.1 * np.sqrt(self.num_samples)).astype('int')
+            minibatch_size = np.ceil(10 * np.sqrt(self.num_samples)).astype('int')
             num_minibatches = int(self.num_samples / minibatch_size)
 
         else:
@@ -189,15 +190,16 @@ class NeuralEncodingModel(object):
         indices = list()
         class_key = 'set'
 
-        # evaluate metrics on training data
-        for train_idx in self.train_indices:
-            results.append(self.metrics(self.data[train_idx]).update({class_key: 'train'}))
-            indices.append(train_idx)
+        # helper function
+        def update_results(idx, class_label):
+            res = self.metrics(idx)
+            res.update({class_key: class_label})
+            results.append(res)
+            indices.append(idx)
 
-        # evaluate metrics on testing data
-        for test_idx in self.test_indices:
-            results.append(self.metrics(self.data[test_idx]).update({class_key: 'test'}))
-            indices.append(test_idx)
+        # evaluate metrics on train / test data
+        [update_results(idx, 'train') for idx in self.train_indices]
+        [update_results(idx, 'test') for idx in self.test_indices]
 
         # create DataFrame to store results
         df = pd.DataFrame(data=results, index=indices)
@@ -261,7 +263,8 @@ class LNLN(NeuralEncodingModel):
         """
 
         # initialize the model object
-        NeuralEncodingModel.__init__(self, 'lnln_exp', stim, rate, spikes, filter_dims, minibatch_size, frac_train)
+        NeuralEncodingModel.__init__(self, 'lnln_exp', stim, rate, filter_dims, minibatch_size,
+                                     frac_train=frac_train, spikes=spikes)
 
         # default # of subunits
         if 'W' in kwargs:
@@ -320,20 +323,18 @@ class LNLN(NeuralEncodingModel):
                 nonlin_init = np.linspace(ts[0], ts[1], self.tentparams['num_tent_samples'])
                 self.theta_init['f'][idx,:] = np.linalg.lstsq(self.tentparams['Phi'], nonlin_init)[0]
 
-            self.theta_init['f'] = np.hstack((self.theta_init['f'], np.zeros((self.num_subunits,1))))
-
         # initialize regularizers
         self.regularizers = {'W': list(), 'f': list()}
 
-    def f_df(self, w, f, data, param_gradient=None):
+    def f_df(self, W, f, data, param_gradient=None):
         """
         Evaluate the negative log-likelihood objective and gradient for the LNLN model class
 
-        f, df = f_df(self, w, f, data)
+        f, df = f_df(self, W, f, data)
 
         Parameters
         ----------
-        w : array_like
+        W : array_like
             A numpy array containing parameter values for the first layer linear filters in the LNLN model
 
         f : array_like
@@ -343,7 +344,7 @@ class LNLN(NeuralEncodingModel):
             Dictionary containing two keys: `stim` and `rate`, each of which is a numpy array.
 
         param_gradient : string (optional, default=None)
-            A string indicating which parameters to compute the gradient for, either `w` or `f`
+            A string indicating which parameters to compute the gradient for, either `W` or `f`
 
         Returns
         -------
@@ -356,12 +357,12 @@ class LNLN(NeuralEncodingModel):
         """
 
         # f is (K,P)
-        # w is (K,N,tau)
-        k, n, tau = w.shape
+        # W is (K,N,tau)
+        k, n, tau = W.shape
         m = (data['rate'].size - tau + 1)
 
         # estimate firing rate and get model response
-        u, z, zgrad, logr, r = self._rate({'w': w, 'f': f}, data['stim'])
+        u, z, zgrad, logr, r = self._rate({'W': W, 'f': f}, data['stim'])
 
         # objective in bits (log-likelihood difference between model and mean firing rates)
         obj_value = np.mean(r - data['rate'] * logr)
@@ -370,7 +371,7 @@ class LNLN(NeuralEncodingModel):
         grad_factor = r - data['rate']  # dims: (M)
 
         # compute gradient
-        if param_gradient == 'w':
+        if param_gradient == 'W':
             nonlin_proj = np.sum(f[:, np.newaxis, :] * zgrad, axis=2)  # dims: (K, M)
             weighted_proj = grad_factor[np.newaxis, :] * nonlin_proj  # dims: (K, M)
             obj_gradient = np.tensordot(weighted_proj, data['stim'], ([1], [1])) / float(m)
@@ -414,14 +415,14 @@ class LNLN(NeuralEncodingModel):
         def optimize_param(f_df_wrapper, param_key):
 
             # initialize the optimizer object
-            opt = Optimizer('sfo', optimizer=SFO(f_df_wrapper, theta_current[param_key], train_data, display=1),
+            opt = Optimizer('sfo', optimizer=SFO(f_df_wrapper, theta_current[param_key], train_data, display=0),
                             num_steps=num_likelihood_steps)
 
             # add regularization terms
             [opt.add_regularizer(reg) for reg in self.regularizers[param_key]]
 
             # run the optimization procedure
-            return opt.minimize(theta_current[param_key], max_iter=max_iter)
+            return opt.minimize(theta_current[param_key], max_iter=max_iter, disp=2)
 
         # alternating optimization: switch between optimizing nonlinearities, and optimizing filters
         for alt_iter in range(num_alt):
@@ -429,7 +430,7 @@ class LNLN(NeuralEncodingModel):
             # Fit nonlinearity
             # wrapper for the objective and gradient
             def f_df_wrapper(f, d):
-                return self.f_df(Wk, f, d, param_gradient='f')
+                return self.f_df(theta_current['W'], f, d, param_gradient='f')
 
             # run the optimization procedure for this parameter
             theta_current['f'] = optimize_param(f_df_wrapper, 'f').copy()
@@ -437,7 +438,7 @@ class LNLN(NeuralEncodingModel):
             # Fit filters
             # wrapper for the objective and gradient
             def f_df_wrapper(W, d):
-                return self.f_df(W, fk, d, param_gradient='W')
+                return self.f_df(W, theta_current['f'], d, param_gradient='W')
 
             # run the optimization procedure for this parameter
             Wk = optimize_param(f_df_wrapper, 'W').copy()
@@ -472,8 +473,11 @@ class LNLN(NeuralEncodingModel):
 
         """
 
+        # get this minibatch of data
+        data = self.data[data_index]
+
         # compute the model firing rate
-        logr, rhat = self._rate(self.theta, self.data[data_index]['stim'])[-2:]
+        logr, rhat = self._rate(self.theta, data['stim'])[-2:]
 
         # correlation coefficient
         cc = float(np.corrcoef(np.vstack((rhat, data['rate'])))[0, 1])
