@@ -1,5 +1,5 @@
-v0.1 (Work in Progress)
-=======================
+v0.1 (February 22, 2015)
+========================
 
 Initial release!
 
