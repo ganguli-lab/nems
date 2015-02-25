@@ -666,6 +666,11 @@ class LNLN(NeuralEncodingModel):
         # get list of training data
         train_data = [self.data[idx] for idx in self.train_indices]
 
+        # define a callback function that gets called during optimization
+        def callback(params, results):
+
+            # print
+
         # runs the optimization procedure for one set of parameters (a single leg of the alternating minimization)
         def optimize_param(f_df_wrapper, param_key):
 
