@@ -767,7 +767,7 @@ class LNLN(NeuralEncodingModel):
                 return self.f_df(W, theta_current['f'], d, param_gradient='W')
 
             # run the optimization procedure for this parameter
-            Wk = optimize_param(f_df_wrapper, 'W').copy()
+            Wk = optimize_param(f_df_wrapper, 'W', check_grad).copy()
 
             # normalize filters
             for filter_index in range(Wk.shape[0]):
