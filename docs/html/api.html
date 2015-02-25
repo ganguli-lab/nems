@@ -324,7 +324,7 @@ held out data as follows:</p>
 
 <dl class="method">
 <dt id="nems.models.LNLN.fit">
-<tt class="descname">fit</tt><big>(</big><em>num_alt=2</em>, <em>max_iter=20</em>, <em>num_likelihood_steps=50</em>, <em>disp=2</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#LNLN.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LNLN.fit" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">fit</tt><big>(</big><em>num_alt=2</em>, <em>max_iter=20</em>, <em>num_likelihood_steps=50</em>, <em>disp=2</em>, <em>check_grad=None</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#LNLN.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LNLN.fit" title="Permalink to this definition">¶</a></dt>
 <dd><p>Runs an optimization algorithm to learn the parameters of the model given training data and regularizers</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -343,8 +343,13 @@ held out data as follows:</p>
 <div><p>The number of steps to take when optimizing the data likelihood term (using SFO)</p>
 </div></blockquote>
 <p><strong>disp</strong> : int, optional</p>
-<blockquote class="last">
+<blockquote>
 <div><p>How much information to display during optimization. (Default: 2)</p>
+</div></blockquote>
+<p><strong>check_grad</strong> : string, optional</p>
+<blockquote class="last">
+<div><p>If &#8216;f&#8217; or &#8216;W&#8217;, then the gradient of the log-likelihood objective with respect to that parameter is checked
+against a numerical estimate.</p>
 </div></blockquote>
 </td>
 </tr>

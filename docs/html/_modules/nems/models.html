@@ -800,7 +800,7 @@
 
         <span class="k">return</span> <span class="n">obj_value</span><span class="p">,</span> <span class="n">obj_gradient</span>
 </div>
-<div class="viewcode-block" id="LNLN.fit"><a class="viewcode-back" href="../../api.html#nems.models.LNLN.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_alt</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">num_likelihood_steps</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">disp</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+<div class="viewcode-block" id="LNLN.fit"><a class="viewcode-back" href="../../api.html#nems.models.LNLN.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_alt</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">num_likelihood_steps</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">disp</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">check_grad</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Runs an optimization algorithm to learn the parameters of the model given training data and regularizers</span>
 
@@ -818,6 +818,10 @@
 <span class="sd">        disp : int, optional</span>
 <span class="sd">            How much information to display during optimization. (Default: 2)</span>
 
+<span class="sd">        check_grad : string, optional</span>
+<span class="sd">            If &#39;f&#39; or &#39;W&#39;, then the gradient of the log-likelihood objective with respect to that parameter is checked</span>
+<span class="sd">            against a numerical estimate.</span>
+
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
 <span class="sd">        See the `proxalgs` module for more information on the optimization algorithm</span>
@@ -831,11 +835,17 @@
         <span class="n">train_data</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_indices</span><span class="p">]</span>
 
         <span class="c"># runs the optimization procedure for one set of parameters (a single leg of the alternating minimization)</span>
-        <span class="k">def</span> <span class="nf">optimize_param</span><span class="p">(</span><span class="n">f_df_wrapper</span><span class="p">,</span> <span class="n">param_key</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">optimize_param</span><span class="p">(</span><span class="n">f_df_wrapper</span><span class="p">,</span> <span class="n">param_key</span><span class="p">,</span> <span class="n">check_grad</span><span class="p">):</span>
+
+            <span class="c"># initialize the SFO instance</span>
+            <span class="n">loglikelihood_optimizer</span> <span class="o">=</span> <span class="n">SFO</span><span class="p">(</span><span class="n">f_df_wrapper</span><span class="p">,</span> <span class="n">theta_current</span><span class="p">[</span><span class="n">param_key</span><span class="p">],</span> <span class="n">train_data</span><span class="p">,</span> <span class="n">display</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="c"># check gradient</span>
+            <span class="k">if</span> <span class="n">check_grad</span> <span class="o">==</span> <span class="n">param_key</span><span class="p">:</span>
+                <span class="n">loglikelihood_optimizer</span><span class="o">.</span><span class="n">check_grad</span><span class="p">()</span>
 
             <span class="c"># initialize the optimizer object</span>
-            <span class="n">opt</span> <span class="o">=</span> <span class="n">Optimizer</span><span class="p">(</span><span class="s">&#39;sfo&#39;</span><span class="p">,</span> <span class="n">optimizer</span><span class="o">=</span><span class="n">SFO</span><span class="p">(</span><span class="n">f_df_wrapper</span><span class="p">,</span> <span class="n">theta_current</span><span class="p">[</span><span class="n">param_key</span><span class="p">],</span> <span class="n">train_data</span><span class="p">,</span> <span class="n">display</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
-                            <span class="n">num_steps</span><span class="o">=</span><span class="n">num_likelihood_steps</span><span class="p">)</span>
+            <span class="n">opt</span> <span class="o">=</span> <span class="n">Optimizer</span><span class="p">(</span><span class="s">&#39;sfo&#39;</span><span class="p">,</span> <span class="n">optimizer</span><span class="o">=</span><span class="n">loglikelihood_optimizer</span><span class="p">,</span> <span class="n">num_steps</span><span class="o">=</span><span class="n">num_likelihood_steps</span><span class="p">)</span>
 
             <span class="c"># add regularization terms</span>
             <span class="p">[</span><span class="n">opt</span><span class="o">.</span><span class="n">add_regularizer</span><span class="p">(</span><span class="n">reg</span><span class="p">)</span> <span class="k">for</span> <span class="n">reg</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">regularizers</span><span class="p">[</span><span class="n">param_key</span><span class="p">]]</span>
@@ -860,7 +870,7 @@
                 <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">f_df</span><span class="p">(</span><span class="n">theta_current</span><span class="p">[</span><span class="s">&#39;W&#39;</span><span class="p">],</span> <span class="n">f</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">param_gradient</span><span class="o">=</span><span class="s">&#39;f&#39;</span><span class="p">)</span>
 
             <span class="c"># run the optimization procedure for this parameter</span>
-            <span class="n">theta_current</span><span class="p">[</span><span class="s">&#39;f&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">optimize_param</span><span class="p">(</span><span class="n">f_df_wrapper</span><span class="p">,</span> <span class="s">&#39;f&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">theta_current</span><span class="p">[</span><span class="s">&#39;f&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">optimize_param</span><span class="p">(</span><span class="n">f_df_wrapper</span><span class="p">,</span> <span class="s">&#39;f&#39;</span><span class="p">,</span> <span class="n">check_grad</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 
             <span class="c"># run the callback</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">print_test_results</span><span class="p">(</span><span class="n">theta_current</span><span class="p">)</span>

@@ -118,18 +118,28 @@
 <p>A list of new features, improvements, and bug-fixes in each release.</p>
 <div class="section" id="v0-2-work-in-progress">
 <h2>v0.2 (Work in Progress)<a class="headerlink" href="#v0-2-work-in-progress" title="Permalink to this headline">¶</a></h2>
-<p>Work in progress. Major focus: add a separate <tt class="docutils literal"><span class="pre">objectives</span></tt> that lets you plug and play different kinds of noise models,
-such as gaussian (mean squared error) or poisson.</p>
-<div class="section" id="api-changes">
-<h3>API Changes<a class="headerlink" href="#api-changes" title="Permalink to this headline">¶</a></h3>
+<p>Work in progress. Current focus: adding a separate <tt class="docutils literal"><span class="pre">objectives</span></tt> that lets you plug and play different kinds of noise models,
+such as gaussian (mean squared error) or poisson. Also: ability to use different final nonlinearities (instead of just the exponential).</p>
+<div class="section" id="new-features">
+<h3>New Features<a class="headerlink" href="#new-features" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
-<li>Added an LN model class that uses a gaussian log-likelihood (mean squared error)</li>
-<li>Added a function <tt class="docutils literal"><span class="pre">print_test_results</span></tt> to <tt class="docutils literal"><span class="pre">NeuralEncodingModel</span></tt></li>
+<li>Added a <tt class="docutils literal"><span class="pre">check_grad</span></tt> option to the <tt class="docutils literal"><span class="pre">LNLN.fit</span></tt> method, for numerically validating analytical gradients</li>
+<li>Added an LN model class that uses a gaussian log-likelihood (mean squared error), <em>untested</em></li>
+<li>Added a function <tt class="docutils literal"><span class="pre">print_test_results</span></tt> to <tt class="docutils literal"><span class="pre">NeuralEncodingModel</span></tt> that nicely prints test results in a formatted ASCII table</li>
 <li>Added the <tt class="docutils literal"><span class="pre">tableprint</span></tt> module as a dependency</li>
 </ul>
 </div>
-<div class="section" id="roadmap">
-<h3>Roadmap<a class="headerlink" href="#roadmap" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="api-changes">
+<h3>API Changes<a class="headerlink" href="#api-changes" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>The <tt class="docutils literal"><span class="pre">test()</span></tt> function now expects the parameters to get passed in, instead of using <tt class="docutils literal"><span class="pre">self.theta</span></tt>. The <tt class="docutils literal"><span class="pre">metrics</span></tt></li>
+</ul>
+<p>function in each subclass of <tt class="docutils literal"><span class="pre">NeuralEncodingModel</span></tt> should accept a dictionary of parameters in addition to the index
+of the minibatch to test. This was necessary to be able to test the model on held out data during optimization (before
+the final parameters were saved in <tt class="docutils literal"><span class="pre">self.theta</span></tt>)</p>
+</div>
+<div class="section" id="roadmap-looking-ahead-to-v1-0">
+<h3>Roadmap (looking ahead to v1.0)<a class="headerlink" href="#roadmap-looking-ahead-to-v1-0" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
 <li>Add the ability to change the final nonlinearity in the <tt class="docutils literal"><span class="pre">LNLN</span></tt> model class</li>
 <li>Add common loss functions and gradients in <tt class="docutils literal"><span class="pre">objectives.py</span></tt></li>
@@ -151,8 +161,8 @@ such as gaussian (mean squared error) or poisson.</p>
 - Build a subclass, the <tt class="docutils literal"><span class="pre">LNLN</span></tt> model class, that lets you fit two layer linear-nonlinear cascade models to data
 - Functions for dealing with tent basis functions (useful for fitting generic nonlinearities) are included in <tt class="docutils literal"><span class="pre">tentbasis.py</span></tt></p>
 </div>
-<div class="section" id="id1">
-<h3>Roadmap<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="roadmap">
+<h3>Roadmap<a class="headerlink" href="#roadmap" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
 <li>Add more model classes (e.g. an <tt class="docutils literal"><span class="pre">LN</span></tt> subclass)</li>
 <li>Better tools for monitoring optimization progress, perhaps storing results in a database? (in <tt class="docutils literal"><span class="pre">datastore.py</span></tt>)</li>
