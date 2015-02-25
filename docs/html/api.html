@@ -150,7 +150,10 @@ recorded in an experiment. For more information, see the documentation (TODO: we
 <tr class="row-odd"><td><a class="reference internal" href="#nems.models.NeuralEncodingModel.add_regularizer" title="nems.models.NeuralEncodingModel.add_regularizer"><tt class="xref py py-obj docutils literal"><span class="pre">add_regularizer</span></tt></a>(theta_key,&nbsp;proxfun,&nbsp;**kwargs)</td>
 <td>Add a proximal operator / objective to the objective, using the proxalgs package</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#nems.models.NeuralEncodingModel.test" title="nems.models.NeuralEncodingModel.test"><tt class="xref py py-obj docutils literal"><span class="pre">test</span></tt></a>()</td>
+<tr class="row-even"><td><a class="reference internal" href="#nems.models.NeuralEncodingModel.print_test_results" title="nems.models.NeuralEncodingModel.print_test_results"><tt class="xref py py-obj docutils literal"><span class="pre">print_test_results</span></tt></a>(theta)</td>
+<td>Prints a table of test results for the given model parameters</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#nems.models.NeuralEncodingModel.test" title="nems.models.NeuralEncodingModel.test"><tt class="xref py py-obj docutils literal"><span class="pre">test</span></tt></a>(theta)</td>
 <td>Evaluate the model on held out data</td>
 </tr>
 </tbody>
@@ -182,8 +185,26 @@ recorded in an experiment. For more information, see the documentation (TODO: we
 </dd></dl>
 
 <dl class="method">
+<dt id="nems.models.NeuralEncodingModel.print_test_results">
+<tt class="descname">print_test_results</tt><big>(</big><em>theta</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#NeuralEncodingModel.print_test_results"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.NeuralEncodingModel.print_test_results" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prints a table of test results for the given model parameters</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>theta</strong> : dict</p>
+<blockquote class="last">
+<div><p>A dictionary of model parameters</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
 <dt id="nems.models.NeuralEncodingModel.test">
-<tt class="descname">test</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/nems/models.html#NeuralEncodingModel.test"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.NeuralEncodingModel.test" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">test</tt><big>(</big><em>theta</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#NeuralEncodingModel.test"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.NeuralEncodingModel.test" title="Permalink to this definition">¶</a></dt>
 <dd><p>Evaluate the model on held out data</p>
 <p>Relies on the model subclass having a <cite>metrics</cite> method, which accepts an index into the data array and returns
 a dictionary containing various metrics evaluated given the current value of the parameters (<cite>theta</cite>) on the
@@ -192,7 +213,13 @@ minibatch of data at the given index</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>results</strong> : DataFrame</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>theta</strong> : dict</p>
+<blockquote>
+<div><p>The parameters to test</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>results</strong> : DataFrame</p>
 <blockquote>
 <div><p>A pandas dataframe with the following columsn: the minibatch index, a &#8216;train&#8217; or &#8216;test&#8217; label, and any
 keywords returned by the metrics function. Each row in the dataframe consists of the metrics evaluated
@@ -210,7 +237,7 @@ computed over the test minibatches.</p>
 <p class="rubric">Examples</p>
 <p>Given an initialized and trained instance of NeuralEncodingModel, you can test the model on
 held out data as follows:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">results</span><span class="p">,</span> <span class="n">avg</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">test</span><span class="p">()</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">results</span><span class="p">,</span> <span class="n">avg</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">test</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">theta</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -234,13 +261,19 @@ held out data as follows:</p>
 <tr class="row-even"><td><a class="reference internal" href="#nems.models.LNLN.f_df" title="nems.models.LNLN.f_df"><tt class="xref py py-obj docutils literal"><span class="pre">f_df</span></tt></a>(W,&nbsp;f,&nbsp;data[,&nbsp;param_gradient])</td>
 <td>Evaluate the negative log-likelihood objective and gradient for the LNLN model class</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#nems.models.LNLN.fit" title="nems.models.LNLN.fit"><tt class="xref py py-obj docutils literal"><span class="pre">fit</span></tt></a>([num_alt,&nbsp;max_iter,&nbsp;num_likelihood_steps])</td>
+<tr class="row-odd"><td><a class="reference internal" href="#nems.models.LNLN.fit" title="nems.models.LNLN.fit"><tt class="xref py py-obj docutils literal"><span class="pre">fit</span></tt></a>([num_alt,&nbsp;max_iter,&nbsp;...])</td>
 <td>Runs an optimization algorithm to learn the parameters of the model given training data and regularizers</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#nems.models.LNLN.metrics" title="nems.models.LNLN.metrics"><tt class="xref py py-obj docutils literal"><span class="pre">metrics</span></tt></a>(data_index)</td>
+<tr class="row-even"><td><a class="reference internal" href="#nems.models.LNLN.metrics" title="nems.models.LNLN.metrics"><tt class="xref py py-obj docutils literal"><span class="pre">metrics</span></tt></a>(data_index,&nbsp;theta)</td>
 <td>Evaluate metrics on a given minibatch.</td>
 </tr>
-<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">test</span></tt>()</td>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">print_test_results</span></tt>(theta)</td>
+<td>Prints a table of test results for the given model parameters</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#nems.models.LNLN.rate" title="nems.models.LNLN.rate"><tt class="xref py py-obj docutils literal"><span class="pre">rate</span></tt></a>(theta,&nbsp;stim)</td>
+<td>Compute the model response given parameters</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">test</span></tt>(theta)</td>
 <td>Evaluate the model on held out data</td>
 </tr>
 </tbody>
@@ -291,7 +324,7 @@ held out data as follows:</p>
 
 <dl class="method">
 <dt id="nems.models.LNLN.fit">
-<tt class="descname">fit</tt><big>(</big><em>num_alt=2</em>, <em>max_iter=25</em>, <em>num_likelihood_steps=50</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#LNLN.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LNLN.fit" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">fit</tt><big>(</big><em>num_alt=2</em>, <em>max_iter=20</em>, <em>num_likelihood_steps=50</em>, <em>disp=2</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#LNLN.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LNLN.fit" title="Permalink to this definition">¶</a></dt>
 <dd><p>Runs an optimization algorithm to learn the parameters of the model given training data and regularizers</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -306,8 +339,12 @@ held out data as follows:</p>
 <div><p>The maximum number of steps to take during each leg of the alternating minimization. Default: 25</p>
 </div></blockquote>
 <p><strong>num_likelihood_steps</strong> : int, optional</p>
-<blockquote class="last">
+<blockquote>
 <div><p>The number of steps to take when optimizing the data likelihood term (using SFO)</p>
+</div></blockquote>
+<p><strong>disp</strong> : int, optional</p>
+<blockquote class="last">
+<div><p>How much information to display during optimization. (Default: 2)</p>
 </div></blockquote>
 </td>
 </tr>
@@ -319,7 +356,7 @@ held out data as follows:</p>
 
 <dl class="method">
 <dt id="nems.models.LNLN.metrics">
-<tt class="descname">metrics</tt><big>(</big><em>data_index</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#LNLN.metrics"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LNLN.metrics" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">metrics</tt><big>(</big><em>data_index</em>, <em>theta</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#LNLN.metrics"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LNLN.metrics" title="Permalink to this definition">¶</a></dt>
 <dd><p>Evaluate metrics on a given minibatch.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -328,6 +365,10 @@ held out data as follows:</p>
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>data_index</strong> : int</p>
 <blockquote>
 <div><p>An index into the array of minibatches (<cite>self.data</cite>) the evaluate</p>
+</div></blockquote>
+<p><strong>theta</strong> : dict</p>
+<blockquote>
+<div><p>The parameters to use in the evaluation</p>
 </div></blockquote>
 </td>
 </tr>
@@ -347,6 +388,29 @@ minibatch, and whose values are single numbers.</p>
 <dd>The <cite>test</cite> function in the super class NeuralEncodingModel relies on the metrics function to return aggregate statistics over all minibatches.</dd>
 </dl>
 </div>
+</dd></dl>
+
+<dl class="method">
+<dt id="nems.models.LNLN.rate">
+<tt class="descname">rate</tt><big>(</big><em>theta</em>, <em>stim</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#LNLN.rate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LNLN.rate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the model response given parameters</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>theta</strong> : dict</p>
+<p><strong>stim</strong> : array_like</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>u</strong> : array_like</p>
+<p><strong>z</strong> : array_like</p>
+<p><strong>zgrad</strong> : array_like</p>
+<p><strong>logr</strong> : array_like</p>
+<p class="last"><strong>r</strong> : array_like</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 </dd></dl>
@@ -374,7 +438,13 @@ minibatch, and whose values are single numbers.</p>
 <tr class="row-even"><td><a class="reference internal" href="#nems.models.LN.metrics" title="nems.models.LN.metrics"><tt class="xref py py-obj docutils literal"><span class="pre">metrics</span></tt></a>(data_index)</td>
 <td>Evaluate metrics on a given minibatch</td>
 </tr>
-<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">test</span></tt>()</td>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">print_test_results</span></tt>(theta)</td>
+<td>Prints a table of test results for the given model parameters</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#nems.models.LN.rate" title="nems.models.LN.rate"><tt class="xref py py-obj docutils literal"><span class="pre">rate</span></tt></a>(theta,&nbsp;stim)</td>
+<td>Compute the model response given parameters</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">test</span></tt>(theta)</td>
 <td>Evaluate the model on held out data</td>
 </tr>
 </tbody>
@@ -433,6 +503,29 @@ minibatch, and whose values are single numbers.</p>
 <dt id="nems.models.LN.metrics">
 <tt class="descname">metrics</tt><big>(</big><em>data_index</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#LN.metrics"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LN.metrics" title="Permalink to this definition">¶</a></dt>
 <dd><p>Evaluate metrics on a given minibatch</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="nems.models.LN.rate">
+<tt class="descname">rate</tt><big>(</big><em>theta</em>, <em>stim</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#LN.rate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LN.rate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the model response given parameters</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>theta</strong> : dict</p>
+<p><strong>stim</strong> : array_like</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>u</strong> : array_like</p>
+<p><strong>z</strong> : array_like</p>
+<p><strong>zgrad</strong> : array_like</p>
+<p><strong>logr</strong> : array_like</p>
+<p class="last"><strong>r</strong> : array_like</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 </dd></dl>

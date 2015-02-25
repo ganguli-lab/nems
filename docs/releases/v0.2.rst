@@ -1,12 +1,18 @@
 v0.2 (Work in Progress)
 =======================
 
+Work in progress. Major focus: add a separate ``objectives`` that lets you plug and play different kinds of noise models,
+such as gaussian (mean squared error) or poisson.
 
 API Changes
 -----------
+- Added an LN model class that uses a gaussian log-likelihood (mean squared error)
+- Added a function ``print_test_results`` to ``NeuralEncodingModel``
+- Added the ``tableprint`` module as a dependency
 
 Roadmap
 -------
-
-Known Issues
-------------
+- Add the ability to change the final nonlinearity in the ``LNLN`` model class
+- Add common loss functions and gradients in ``objectives.py``
+- Build some simple LN and LNLN simulations in ``simulate.py``
+- Write some tests where we recover simulated model parameters

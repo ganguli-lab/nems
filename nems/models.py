@@ -30,6 +30,7 @@ from .sfo_admm import SFO
 from proxalgs.core import Optimizer
 from proxalgs import operators
 import pandas as pd
+import tableprint
 
 # exports
 __all__ = ['NeuralEncodingModel', 'LNLN', 'LN']
@@ -159,13 +160,18 @@ class NeuralEncodingModel(object):
         # add this proximal operator function to the list
         self.regularizers[theta_key].append(partial(wrapper, **kwargs))
 
-    def test(self):
+    def test(self, theta):
         """
         Evaluate the model on held out data
 
         Relies on the model subclass having a `metrics` method, which accepts an index into the data array and returns
         a dictionary containing various metrics evaluated given the current value of the parameters (`theta`) on the
         minibatch of data at the given index
+
+        Parameters
+        ----------
+        theta : dict
+            The parameters to test
 
         Returns
         -------
@@ -183,7 +189,7 @@ class NeuralEncodingModel(object):
         Given an initialized and trained instance of NeuralEncodingModel, you can test the model on
         held out data as follows:
 
-        >>> results, avg = model.test()
+        >>> results, avg = model.test(model.theta)
 
         """
 
@@ -193,7 +199,7 @@ class NeuralEncodingModel(object):
 
         # helper function
         def update_results(idx, class_label):
-            res = self.metrics(idx)
+            res = self.metrics(idx, theta)
             res.update({class_key: class_label})
             results.append(res)
             indices.append(idx)
@@ -209,6 +215,44 @@ class NeuralEncodingModel(object):
         avg = dict(df.loc[df[class_key] == 'test'].mean())
 
         return df, avg
+
+    def print_test_results(self, theta):
+        """
+        Prints a table of test results for the given model parameters
+
+        Parameters
+        ----------
+        theta : dict
+            A dictionary of model parameters
+
+        """
+
+        # run test
+        df, test_res = self.test(theta)
+
+        # also compute training results, and spreads
+        ntrain = (df['set'] == 'train').sum()
+        ntest = (df['set'] == 'test').sum()
+        train_res = dict(df.loc[df['set'] == 'train'].mean())
+        train_spread = dict(df.loc[df['set'] == 'train'].std())
+        test_spread = dict(df.loc[df['set'] == 'test'].std())
+
+        # build column headers (names of metrics) and data matrix
+        headers = ['Train/Test Set']
+        data = [['train'], ['test']]
+
+        for key in test_res.keys():
+
+            # headers
+            headers += [key + ' (mean)']
+            headers += [key + ' (sem)']
+
+            # data (mean + standard error of the mean)
+            data[0] += [train_res[key], train_spread[key] / np.sqrt(ntrain)]
+            data[1] += [test_res[key], test_spread[key] / np.sqrt(ntest)]
+
+        # print the table
+        tableprint.table(data, headers, {'column_width': 30, 'precision': '8g'})
 
 
 class LN(NeuralEncodingModel):
@@ -316,7 +360,7 @@ class LN(NeuralEncodingModel):
         """
 
         # compute the model rate
-        u, z, zgrad, logr, r = self._rate({'W': W, 'f': f}, data['stim'])
+        u, z, zgrad, logr, r = self.rate({'W': W, 'f': f}, data['stim'])
 
         # main objective (gaussian log-likelihood)
         rdiff = r - data['rate']
@@ -345,7 +389,7 @@ class LN(NeuralEncodingModel):
         """
 
         # compute the firing rate
-        rhat = self._rate(self.theta, self.data[data_index]['stim'])
+        rhat = self.rate(self.theta, self.data[data_index]['stim'])
         rtrue = self.data[data_index]['rate']
 
         # mean squared error
@@ -356,7 +400,7 @@ class LN(NeuralEncodingModel):
 
         return {'correlation coefficient': cc, 'mean squared error': mse}
 
-    def _rate(self, theta, stim):
+    def rate(self, theta, stim):
         """
         Compute the model response given parameters
 
@@ -617,7 +661,7 @@ class LNLN(NeuralEncodingModel):
         m = (data['rate'].size - tau + 1)
 
         # estimate firing rate and get model response
-        u, z, zgrad, logr, r = self._rate({'W': W, 'f': f}, data['stim'])
+        u, z, zgrad, logr, r = self.rate({'W': W, 'f': f}, data['stim'])
 
         # objective in bits (log-likelihood difference between model and mean firing rates)
         obj_value = np.mean(r - data['rate'] * logr)
@@ -639,7 +683,7 @@ class LNLN(NeuralEncodingModel):
 
         return obj_value, obj_gradient
 
-    def fit(self, num_alt=2, max_iter=25, num_likelihood_steps=50):
+    def fit(self, num_alt=2, max_iter=20, num_likelihood_steps=50, disp=2):
         """
         Runs an optimization algorithm to learn the parameters of the model given training data and regularizers
 
@@ -654,6 +698,9 @@ class LNLN(NeuralEncodingModel):
         num_likelihood_steps : int, optional
             The number of steps to take when optimizing the data likelihood term (using SFO)
 
+        disp : int, optional
+            How much information to display during optimization. (Default: 2)
+
         Notes
         -----
         See the `proxalgs` module for more information on the optimization algorithm
@@ -666,11 +713,6 @@ class LNLN(NeuralEncodingModel):
         # get list of training data
         train_data = [self.data[idx] for idx in self.train_indices]
 
-        # define a callback function that gets called during optimization
-        def callback(params, results):
-
-            # print
-
         # runs the optimization procedure for one set of parameters (a single leg of the alternating minimization)
         def optimize_param(f_df_wrapper, param_key):
 
@@ -682,12 +724,20 @@ class LNLN(NeuralEncodingModel):
             [opt.add_regularizer(reg) for reg in self.regularizers[param_key]]
 
             # run the optimization procedure
-            return opt.minimize(theta_current[param_key], max_iter=max_iter, disp=2)
+            return opt.minimize(theta_current[param_key], max_iter=max_iter, disp=disp)
+
+        # print results based on the initial parameters
+        print('\n')
+        tableprint.table([], ['Initial parameters'], {'column_width': 20, 'line_char': '='})
+        self.print_test_results(theta_current)
 
         # alternating optimization: switch between optimizing nonlinearities, and optimizing filters
         for alt_iter in range(num_alt):
 
             # Fit nonlinearity
+            print('\n')
+            tableprint.table([], ['Fitting nonlinearity'], {'column_width': 20, 'line_char': '='})
+
             # wrapper for the objective and gradient
             def f_df_wrapper(f, d):
                 return self.f_df(theta_current['W'], f, d, param_gradient='f')
@@ -695,7 +745,13 @@ class LNLN(NeuralEncodingModel):
             # run the optimization procedure for this parameter
             theta_current['f'] = optimize_param(f_df_wrapper, 'f').copy()
 
+            # run the callback
+            self.print_test_results(theta_current)
+
             # Fit filters
+            print('\n')
+            tableprint.table([], ['Fitting filters'], {'column_width': 20, 'line_char': '='})
+
             # wrapper for the objective and gradient
             def f_df_wrapper(W, d):
                 return self.f_df(W, theta_current['f'], d, param_gradient='W')
@@ -707,10 +763,13 @@ class LNLN(NeuralEncodingModel):
             for filter_index in range(Wk.shape[0]):
                 theta_current['W'][filter_index] = _nrm(Wk[filter_index])
 
+            # run the callback
+            self.print_test_results(theta_current)
+
         # store learned parameters
         self.theta = copy.deepcopy(theta_current)
 
-    def metrics(self, data_index):
+    def metrics(self, data_index, theta):
         """
         Evaluate metrics on a given minibatch.
 
@@ -718,6 +777,9 @@ class LNLN(NeuralEncodingModel):
         ----------
         data_index : int
             An index into the array of minibatches (`self.data`) the evaluate
+
+        theta : dict
+            The parameters to use in the evaluation
 
         Returns
         -------
@@ -737,7 +799,7 @@ class LNLN(NeuralEncodingModel):
         data = self.data[data_index]
 
         # compute the model firing rate
-        logr, rhat = self._rate(self.theta, data['stim'])[-2:]
+        logr, rhat = self.rate(theta, data['stim'])[-2:]
 
         # correlation coefficient
         cc = float(np.corrcoef(np.vstack((rhat, data['rate'])))[0, 1])
@@ -749,7 +811,7 @@ class LNLN(NeuralEncodingModel):
         # mean squared error
         mse = float(np.mean((rhat - data['rate']) ** 2))
 
-        return {'corrcoef': cc, 'log-likelihood improvement': fobj, 'mean squared error': mse}
+        return {'corrcoef': cc, 'log-likelihood (rel.)': fobj, 'mean squared error': mse}
 
     def _stim_gradient(self, stim):
         """
@@ -759,7 +821,7 @@ class LNLN(NeuralEncodingModel):
 
         """
 
-        u, z, zgrad, logr, r = self._rate(self.theta, stim)
+        u, z, zgrad, logr, r = self.rate(self.theta, stim)
 
         xgrad = np.zeros_like(np.squeeze(stim))
         for idx in range(self.theta['W'].shape[0]):
@@ -771,7 +833,7 @@ class LNLN(NeuralEncodingModel):
 
         return r, xgrad * r
 
-    def _rate(self, theta, stim):
+    def rate(self, theta, stim):
         """
         Compute the model response given parameters
 
