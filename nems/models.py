@@ -683,7 +683,7 @@ class LNLN(NeuralEncodingModel):
 
         return obj_value, obj_gradient
 
-    def fit(self, num_alt=2, max_iter=20, num_likelihood_steps=50, disp=2):
+    def fit(self, num_alt=2, max_iter=20, num_likelihood_steps=50, disp=2, check_grad=None):
         """
         Runs an optimization algorithm to learn the parameters of the model given training data and regularizers
 
@@ -701,6 +701,10 @@ class LNLN(NeuralEncodingModel):
         disp : int, optional
             How much information to display during optimization. (Default: 2)
 
+        check_grad : string, optional
+            If 'f' or 'W', then the gradient of the log-likelihood objective with respect to that parameter is checked
+            against a numerical estimate.
+
         Notes
         -----
         See the `proxalgs` module for more information on the optimization algorithm
@@ -714,11 +718,17 @@ class LNLN(NeuralEncodingModel):
         train_data = [self.data[idx] for idx in self.train_indices]
 
         # runs the optimization procedure for one set of parameters (a single leg of the alternating minimization)
-        def optimize_param(f_df_wrapper, param_key):
+        def optimize_param(f_df_wrapper, param_key, check_grad):
+
+            # initialize the SFO instance
+            loglikelihood_optimizer = SFO(f_df_wrapper, theta_current[param_key], train_data, display=0)
+
+            # check gradient
+            if check_grad == param_key:
+                loglikelihood_optimizer.check_grad()
 
             # initialize the optimizer object
-            opt = Optimizer('sfo', optimizer=SFO(f_df_wrapper, theta_current[param_key], train_data, display=0),
-                            num_steps=num_likelihood_steps)
+            opt = Optimizer('sfo', optimizer=loglikelihood_optimizer, num_steps=num_likelihood_steps)
 
             # add regularization terms
             [opt.add_regularizer(reg) for reg in self.regularizers[param_key]]
@@ -743,7 +753,7 @@ class LNLN(NeuralEncodingModel):
                 return self.f_df(theta_current['W'], f, d, param_gradient='f')
 
             # run the optimization procedure for this parameter
-            theta_current['f'] = optimize_param(f_df_wrapper, 'f').copy()
+            theta_current['f'] = optimize_param(f_df_wrapper, 'f', check_grad).copy()
 
             # run the callback
             self.print_test_results(theta_current)
