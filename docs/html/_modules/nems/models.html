@@ -69,6 +69,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../api.html#module-nems.models">nems.models</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api.html#module-nems.objectives">nems.objectives</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#module-nems.nonlinearities">nems.nonlinearities</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api.html#module-nems.tentbasis">nems.tentbasis</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api.html#module-nems.sensitivity">nems.sensitivity</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api.html#module-nems.simulate">nems.simulate</a></li>
@@ -76,7 +77,9 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../changelog.html#v0-2-work-in-progress">v0.2 (Work in Progress)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../changelog.html#roadmap-looking-ahead-to-v1-0">Roadmap (looking ahead to v1.0)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../changelog.html#releases">Releases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../changelog.html#v0-2-february-25-2015">v0.2 (February 25, 2015)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../changelog.html#v0-1-february-22-2015">v0.1 (February 22, 2015)</a></li>
 </ul>
 </li>
@@ -147,6 +150,7 @@
 <span class="kn">from</span> <span class="nn">proxalgs.core</span> <span class="kn">import</span> <span class="n">Optimizer</span>
 <span class="kn">from</span> <span class="nn">proxalgs</span> <span class="kn">import</span> <span class="n">operators</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">nonlinearities</span>
 <span class="kn">import</span> <span class="nn">tableprint</span>
 
 <span class="c"># exports</span>
@@ -481,7 +485,7 @@
 
         <span class="c"># main objective (gaussian log-likelihood)</span>
         <span class="n">rdiff</span> <span class="o">=</span> <span class="n">r</span> <span class="o">-</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;rate&#39;</span><span class="p">]</span>
-        <span class="n">obj_value</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">rdiff</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">obj_value</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">rdiff</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
 
         <span class="c"># gradient wrt. filter</span>
         <span class="k">if</span> <span class="n">param_gradient</span> <span class="o">==</span> <span class="s">&#39;W&#39;</span><span class="p">:</span>
@@ -510,7 +514,7 @@
         <span class="n">rtrue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">data_index</span><span class="p">][</span><span class="s">&#39;rate&#39;</span><span class="p">]</span>
 
         <span class="c"># mean squared error</span>
-        <span class="n">mse</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">((</span><span class="n">rhat</span><span class="o">-</span><span class="n">rtrue</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">mse</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">((</span><span class="n">rhat</span> <span class="o">-</span> <span class="n">rtrue</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
 
         <span class="c"># correlation coefficient</span>
         <span class="n">cc</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">corrcoef</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">rhat</span><span class="p">,</span> <span class="n">rtrue</span><span class="p">)))[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
@@ -616,14 +620,14 @@
 </div></div>
 <div class="viewcode-block" id="LNLN"><a class="viewcode-back" href="../../api.html#nems.models.LNLN">[docs]</a><span class="k">class</span> <span class="nc">LNLN</span><span class="p">(</span><span class="n">NeuralEncodingModel</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stim</span><span class="p">,</span> <span class="n">rate</span><span class="p">,</span> <span class="n">filter_dims</span><span class="p">,</span> <span class="n">minibatch_size</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">frac_train</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span> <span class="n">num_subunits</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-                 <span class="n">num_tents</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">sigmasq</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">tent_type</span><span class="o">=</span><span class="s">&#39;gaussian&#39;</span><span class="p">,</span> <span class="n">spikes</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+                 <span class="n">num_tents</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">sigmasq</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">tent_type</span><span class="o">=</span><span class="s">&#39;gaussian&#39;</span><span class="p">,</span> <span class="n">final_nonlinearity</span><span class="o">=</span><span class="s">&#39;softrect&#39;</span><span class="p">,</span> <span class="n">spikes</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initializes a two layer cascade linear-nonlinear (LNLN) model</span>
 
 <span class="sd">        The model consists of:</span>
 <span class="sd">        - an initial stage of k different spatiotemporal filters</span>
 <span class="sd">        - these filtered signals pass through a set of k nonlinearities</span>
-<span class="sd">        - the output from the k nonlinearities are then summed and passed through an exponential to predict the firing rate</span>
+<span class="sd">        - the output from the k nonlinearities are then summed and put through a final nonlinearity to predict the rate</span>
 
 <span class="sd">        The learned parameters include the k first layer spatiotemporal filters and k nonlinearity parameters.</span>
 <span class="sd">        The nonlinearities are parameterized using a set of tent basis functions</span>
@@ -668,8 +672,14 @@
 <span class="sd">        tent_type : string</span>
 <span class="sd">            the type of tent basis function to use (default: &#39;Gaussian&#39;)</span>
 
+<span class="sd">        final_nonlinearity : string</span>
+<span class="sd">            a function from the `nonlinearities` module</span>
+
 <span class="sd">        Other Parameters</span>
 <span class="sd">        ----------------</span>
+<span class="sd">        spikes : array_like</span>
+<span class="sd">            an array of spike counts (same dimensions as the rate)</span>
+
 <span class="sd">        \\*\\*kwargs : keyword arguments</span>
 <span class="sd">            if given arguments with the keys `W` or `f`, then those values are used to initialize the filter</span>
 <span class="sd">            or nonlinearity parameters, respectively.</span>
@@ -740,6 +750,9 @@
         <span class="c"># initialize regularizers</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">regularizers</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;W&#39;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(),</span> <span class="s">&#39;f&#39;</span><span class="p">:</span> <span class="nb">list</span><span class="p">()}</span>
 
+        <span class="c"># final nonlinearity</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">final_nonlin_function</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">nonlinearities</span><span class="p">,</span> <span class="n">final_nonlinearity</span><span class="p">)</span>
+
 <div class="viewcode-block" id="LNLN.f_df"><a class="viewcode-back" href="../../api.html#nems.models.LNLN.f_df">[docs]</a>    <span class="k">def</span> <span class="nf">f_df</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">param_gradient</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Evaluate the negative log-likelihood objective and gradient for the LNLN model class</span>
@@ -778,13 +791,13 @@
         <span class="n">m</span> <span class="o">=</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;rate&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span> <span class="o">-</span> <span class="n">tau</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
 
         <span class="c"># estimate firing rate and get model response</span>
-        <span class="n">u</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">zgrad</span><span class="p">,</span> <span class="n">logr</span><span class="p">,</span> <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rate</span><span class="p">({</span><span class="s">&#39;W&#39;</span><span class="p">:</span> <span class="n">W</span><span class="p">,</span> <span class="s">&#39;f&#39;</span><span class="p">:</span> <span class="n">f</span><span class="p">},</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;stim&#39;</span><span class="p">])</span>
+        <span class="n">u</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">zgrad</span><span class="p">,</span> <span class="n">drdz</span><span class="p">,</span> <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rate</span><span class="p">({</span><span class="s">&#39;W&#39;</span><span class="p">:</span> <span class="n">W</span><span class="p">,</span> <span class="s">&#39;f&#39;</span><span class="p">:</span> <span class="n">f</span><span class="p">},</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;stim&#39;</span><span class="p">])</span>
 
-        <span class="c"># objective in bits (log-likelihood difference between model and mean firing rates)</span>
-        <span class="n">obj_value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">r</span> <span class="o">-</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;rate&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">logr</span><span class="p">)</span>
+        <span class="c"># objective in bits (poisson log-likelihood)</span>
+        <span class="n">obj_value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">r</span> <span class="o">-</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;rate&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">r</span><span class="p">))</span>
 
-        <span class="c"># factor in front of the gradient</span>
-        <span class="n">grad_factor</span> <span class="o">=</span> <span class="n">r</span> <span class="o">-</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;rate&#39;</span><span class="p">]</span>  <span class="c"># dims: (M)</span>
+        <span class="c"># factor in front of the gradient (poisson log-likelihood)</span>
+        <span class="n">grad_factor</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;rate&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">r</span><span class="p">)</span> <span class="o">*</span> <span class="n">drdz</span>  <span class="c"># dims: (M)</span>
 
         <span class="c"># compute gradient</span>
         <span class="k">if</span> <span class="n">param_gradient</span> <span class="o">==</span> <span class="s">&#39;W&#39;</span><span class="p">:</span>
@@ -884,7 +897,7 @@
                 <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">f_df</span><span class="p">(</span><span class="n">W</span><span class="p">,</span> <span class="n">theta_current</span><span class="p">[</span><span class="s">&#39;f&#39;</span><span class="p">],</span> <span class="n">d</span><span class="p">,</span> <span class="n">param_gradient</span><span class="o">=</span><span class="s">&#39;W&#39;</span><span class="p">)</span>
 
             <span class="c"># run the optimization procedure for this parameter</span>
-            <span class="n">Wk</span> <span class="o">=</span> <span class="n">optimize_param</span><span class="p">(</span><span class="n">f_df_wrapper</span><span class="p">,</span> <span class="s">&#39;W&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">Wk</span> <span class="o">=</span> <span class="n">optimize_param</span><span class="p">(</span><span class="n">f_df_wrapper</span><span class="p">,</span> <span class="s">&#39;W&#39;</span><span class="p">,</span> <span class="n">check_grad</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 
             <span class="c"># normalize filters</span>
             <span class="k">for</span> <span class="n">filter_index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">Wk</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
@@ -926,7 +939,8 @@
         <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">data_index</span><span class="p">]</span>
 
         <span class="c"># compute the model firing rate</span>
-        <span class="n">logr</span><span class="p">,</span> <span class="n">rhat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rate</span><span class="p">(</span><span class="n">theta</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;stim&#39;</span><span class="p">])[</span><span class="o">-</span><span class="mi">2</span><span class="p">:]</span>
+        <span class="n">rhat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rate</span><span class="p">(</span><span class="n">theta</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;stim&#39;</span><span class="p">])[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">logr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">rhat</span><span class="p">)</span>
 
         <span class="c"># correlation coefficient</span>
         <span class="n">cc</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">corrcoef</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">rhat</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;rate&#39;</span><span class="p">])))[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
@@ -948,7 +962,7 @@
 
 <span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="n">u</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">zgrad</span><span class="p">,</span> <span class="n">logr</span><span class="p">,</span> <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">theta</span><span class="p">,</span> <span class="n">stim</span><span class="p">)</span>
+        <span class="n">u</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">zgrad</span><span class="p">,</span> <span class="n">drdz</span><span class="p">,</span> <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">theta</span><span class="p">,</span> <span class="n">stim</span><span class="p">)</span>
 
         <span class="n">xgrad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">stim</span><span class="p">))</span>
         <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">theta</span><span class="p">[</span><span class="s">&#39;W&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
@@ -974,7 +988,7 @@
 <span class="sd">        u : array_like</span>
 <span class="sd">        z : array_like</span>
 <span class="sd">        zgrad : array_like</span>
-<span class="sd">        logr : array_like</span>
+<span class="sd">        drdz : array_like</span>
 <span class="sd">        r : array_like</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -986,10 +1000,9 @@
         <span class="n">z</span><span class="p">,</span> <span class="n">zgrad</span> <span class="o">=</span> <span class="n">tentbasis</span><span class="o">.</span><span class="n">eval_tents</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tentparams</span><span class="p">)</span>
 
         <span class="c"># compute log(rate) and the firing rate</span>
-        <span class="n">logr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tensordot</span><span class="p">(</span><span class="n">theta</span><span class="p">[</span><span class="s">&#39;f&#39;</span><span class="p">],</span> <span class="n">z</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]))</span>  <span class="c"># dims: (M)</span>
-        <span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">logr</span><span class="p">)</span>  <span class="c"># dims: (M)</span>
+        <span class="n">r</span><span class="p">,</span> <span class="n">drdz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_nonlin_function</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">tensordot</span><span class="p">(</span><span class="n">theta</span><span class="p">[</span><span class="s">&#39;f&#39;</span><span class="p">],</span> <span class="n">z</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">])))</span>  <span class="c"># dims: (M)</span>
 
-        <span class="k">return</span> <span class="n">u</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">zgrad</span><span class="p">,</span> <span class="n">logr</span><span class="p">,</span> <span class="n">r</span>
+        <span class="k">return</span> <span class="n">u</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">zgrad</span><span class="p">,</span> <span class="n">drdz</span><span class="p">,</span> <span class="n">r</span>
 
 </div></div>
 <span class="k">def</span> <span class="nf">_rolling_window</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">window</span><span class="p">):</span>

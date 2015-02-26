@@ -20,6 +20,14 @@ nems.objectives
     :undoc-members:
     :show-inheritance:
 
+nems.nonlinearities
+-------------------
+
+.. automodule:: nems.nonlinearities
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 nems.tentbasis
 --------------
 

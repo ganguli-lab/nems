@@ -69,6 +69,7 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="">API Reference</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#module-nems.models">nems.models</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#module-nems.objectives">nems.objectives</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-nems.nonlinearities">nems.nonlinearities</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#module-nems.tentbasis">nems.tentbasis</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#module-nems.sensitivity">nems.sensitivity</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#module-nems.simulate">nems.simulate</a></li>
@@ -76,7 +77,9 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="changelog.html#v0-2-work-in-progress">v0.2 (Work in Progress)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#roadmap-looking-ahead-to-v1-0">Roadmap (looking ahead to v1.0)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#releases">Releases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#v0-2-february-25-2015">v0.2 (February 25, 2015)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="changelog.html#v0-1-february-22-2015">v0.1 (February 22, 2015)</a></li>
 </ul>
 </li>
@@ -246,7 +249,7 @@ held out data as follows:</p>
 
 <dl class="class">
 <dt id="nems.models.LNLN">
-<em class="property">class </em><tt class="descclassname">nems.models.</tt><tt class="descname">LNLN</tt><big>(</big><em>stim</em>, <em>rate</em>, <em>filter_dims</em>, <em>minibatch_size=None</em>, <em>frac_train=0.8</em>, <em>num_subunits=1</em>, <em>num_tents=30</em>, <em>sigmasq=0.2</em>, <em>tent_type='gaussian'</em>, <em>spikes=None</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#LNLN"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LNLN" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">nems.models.</tt><tt class="descname">LNLN</tt><big>(</big><em>stim</em>, <em>rate</em>, <em>filter_dims</em>, <em>minibatch_size=None</em>, <em>frac_train=0.8</em>, <em>num_subunits=1</em>, <em>num_tents=30</em>, <em>sigmasq=0.2</em>, <em>tent_type='gaussian'</em>, <em>final_nonlinearity='softrect'</em>, <em>spikes=None</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#LNLN"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LNLN" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#nems.models.NeuralEncodingModel" title="nems.models.NeuralEncodingModel"><tt class="xref py py-class docutils literal"><span class="pre">nems.models.NeuralEncodingModel</span></tt></a></p>
 <p class="rubric">Methods</p>
 <table border="1" class="longtable docutils">
@@ -410,7 +413,7 @@ minibatch, and whose values are single numbers.</p>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>u</strong> : array_like</p>
 <p><strong>z</strong> : array_like</p>
 <p><strong>zgrad</strong> : array_like</p>
-<p><strong>logr</strong> : array_like</p>
+<p><strong>drdz</strong> : array_like</p>
 <p class="last"><strong>r</strong> : array_like</p>
 </td>
 </tr>
@@ -567,6 +570,98 @@ regularizers[key] is a function that takes as an argument the parameter value</p
 </dd></dl>
 
 </div>
+<div class="section" id="module-nems.nonlinearities">
+<span id="nems-nonlinearities"></span><h2>nems.nonlinearities<a class="headerlink" href="#module-nems.nonlinearities" title="Permalink to this headline">¶</a></h2>
+<p>Nonlinearities and their derivatives</p>
+<p>Each function returns the value and derivative of a nonlinearity. Given <span class="math">\(y = f(x)\)</span>, the function returns
+<span class="math">\(y\)</span> and <span class="math">\(dy/dx\)</span></p>
+<dl class="function">
+<dt id="nems.nonlinearities.exp">
+<tt class="descclassname">nems.nonlinearities.</tt><tt class="descname">exp</tt><big>(</big><em>x</em><big>)</big><a class="reference internal" href="_modules/nems/nonlinearities.html#exp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.nonlinearities.exp" title="Permalink to this definition">¶</a></dt>
+<dd><p>An exponential function</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>x</strong> : array_like</p>
+<blockquote>
+<div><p>Input values</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>y</strong> : array_like</p>
+<blockquote>
+<div><p>The nonlinearity evaluated at the input</p>
+</div></blockquote>
+<p><strong>dydx</strong> : array_like</p>
+<blockquote class="last">
+<div><p>The derivative of the nonlinearity evaluated at the input</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="nems.nonlinearities.linear">
+<tt class="descclassname">nems.nonlinearities.</tt><tt class="descname">linear</tt><big>(</big><em>x</em><big>)</big><a class="reference internal" href="_modules/nems/nonlinearities.html#linear"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.nonlinearities.linear" title="Permalink to this definition">¶</a></dt>
+<dd><p>A linear function</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>x</strong> : array_like</p>
+<blockquote>
+<div><p>Input values</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>y</strong> : array_like</p>
+<blockquote>
+<div><p>The nonlinearity evaluated at the input</p>
+</div></blockquote>
+<p><strong>dydx</strong> : array_like</p>
+<blockquote class="last">
+<div><p>The derivative of the nonlinearity evaluated at the input</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="nems.nonlinearities.softrect">
+<tt class="descclassname">nems.nonlinearities.</tt><tt class="descname">softrect</tt><big>(</big><em>x</em><big>)</big><a class="reference internal" href="_modules/nems/nonlinearities.html#softrect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.nonlinearities.softrect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Soft rectifying function</p>
+<div class="math">
+\[y = \log(1+e^x)\]</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>x</strong> : array_like</p>
+<blockquote>
+<div><p>Input values</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>y</strong> : array_like</p>
+<blockquote>
+<div><p>The nonlinearity evaluated at the input</p>
+</div></blockquote>
+<p><strong>dydx</strong> : array_like</p>
+<blockquote class="last">
+<div><p>The derivative of the nonlinearity evaluated at the input</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
 <div class="section" id="module-nems.tentbasis">
 <span id="nems-tentbasis"></span><h2>nems.tentbasis<a class="headerlink" href="#module-nems.tentbasis" title="Permalink to this headline">¶</a></h2>
 <p>Functions for generating and evaluating functions and gradients
@@ -587,9 +682,9 @@ composed of linear combinations of tent basis functions.</p>
 <p>These have the following functional form:</p>
 <div class="math">
 \[f(x) = \sum_i w_i \phi(x-i)\]</div>
-<p>where each tent function phi is a _fixed_ basis function, shifted
-along the input dimension to tile the input space. The function f(x)
-is parameterized as a linear combination (with weights given by lpha)
+<p>where each tent function <span class="math">\(\phi\)</span> is a _fixed_ basis function, shifted
+along the input dimension to tile the input space. The function <span class="math">\(f(x)\)</span>
+is parameterized as a linear combination (with weights given by <span class="math">\(lpha\)</span>)
 of these tent functions.</p>
 <dl class="function">
 <dt id="nems.tentbasis.build_tents">

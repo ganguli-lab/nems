@@ -1,11 +1,12 @@
-v0.2 (Work in Progress)
-=======================
+v0.2 (February 25, 2015)
+========================
 
 Work in progress. Current focus: adding a separate ``objectives`` that lets you plug and play different kinds of noise models,
 such as gaussian (mean squared error) or poisson. Also: ability to use different final nonlinearities (instead of just the exponential).
 
 New Features
 ------------
+- Added a ``nonlinearities.py`` module that lets you customize the final model nonlinearity
 - Added a ``check_grad`` option to the ``LNLN.fit`` method, for numerically validating analytical gradients
 - Added an LN model class that uses a gaussian log-likelihood (mean squared error), *untested*
 - Added a function ``print_test_results`` to ``NeuralEncodingModel`` that nicely prints test results in a formatted ASCII table
@@ -13,14 +14,10 @@ New Features
 
 API Changes
 -----------
+- Added the ability to specify custom final nonlinearities in ``LNLN``, using the ``nonlinearities`` module
+- Changed how the ``LNLN.rate()`` function works, it now returns the derivative of the final nonlinearity (instead of the log firing rate).
+This is used internally in ``LNLN.fit()`` to compute the objective and gradient using different final nonlinearities
 - The ``test()`` function now expects the parameters to get passed in, instead of using ``self.theta``. The ``metrics``
 function in each subclass of ``NeuralEncodingModel`` should accept a dictionary of parameters in addition to the index
 of the minibatch to test. This was necessary to be able to test the model on held out data during optimization (before
 the final parameters were saved in ``self.theta``)
-
-Roadmap (looking ahead to v1.0)
--------------------------------
-- Add the ability to change the final nonlinearity in the ``LNLN`` model class
-- Add common loss functions and gradients in ``objectives.py``
-- Build some simple LN and LNLN simulations in ``simulate.py``
-- Write some tests where we recover simulated model parameters

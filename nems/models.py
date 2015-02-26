@@ -30,6 +30,7 @@ from .sfo_admm import SFO
 from proxalgs.core import Optimizer
 from proxalgs import operators
 import pandas as pd
+import nonlinearities
 import tableprint
 
 # exports
@@ -364,7 +365,7 @@ class LN(NeuralEncodingModel):
 
         # main objective (gaussian log-likelihood)
         rdiff = r - data['rate']
-        obj_value = 0.5 * np.mean(rdiff**2)
+        obj_value = 0.5 * np.mean(rdiff ** 2)
 
         # gradient wrt. filter
         if param_gradient == 'W':
@@ -393,7 +394,7 @@ class LN(NeuralEncodingModel):
         rtrue = self.data[data_index]['rate']
 
         # mean squared error
-        mse = np.mean((rhat-rtrue)**2)
+        mse = np.mean((rhat - rtrue) ** 2)
 
         # correlation coefficient
         cc = float(np.corrcoef(np.vstack((rhat, rtrue)))[0, 1])
@@ -499,14 +500,14 @@ class LN(NeuralEncodingModel):
 
 class LNLN(NeuralEncodingModel):
     def __init__(self, stim, rate, filter_dims, minibatch_size=None, frac_train=0.8, num_subunits=1,
-                 num_tents=30, sigmasq=0.2, tent_type='gaussian', spikes=None, **kwargs):
+                 num_tents=30, sigmasq=0.2, tent_type='gaussian', final_nonlinearity='softrect', spikes=None, **kwargs):
         """
         Initializes a two layer cascade linear-nonlinear (LNLN) model
 
         The model consists of:
         - an initial stage of k different spatiotemporal filters
         - these filtered signals pass through a set of k nonlinearities
-        - the output from the k nonlinearities are then summed and passed through an exponential to predict the firing rate
+        - the output from the k nonlinearities are then summed and put through a final nonlinearity to predict the rate
 
         The learned parameters include the k first layer spatiotemporal filters and k nonlinearity parameters.
         The nonlinearities are parameterized using a set of tent basis functions
@@ -551,8 +552,14 @@ class LNLN(NeuralEncodingModel):
         tent_type : string
             the type of tent basis function to use (default: 'Gaussian')
 
+        final_nonlinearity : string
+            a function from the `nonlinearities` module
+
         Other Parameters
         ----------------
+        spikes : array_like
+            an array of spike counts (same dimensions as the rate)
+
         \\*\\*kwargs : keyword arguments
             if given arguments with the keys `W` or `f`, then those values are used to initialize the filter
             or nonlinearity parameters, respectively.
@@ -623,6 +630,9 @@ class LNLN(NeuralEncodingModel):
         # initialize regularizers
         self.regularizers = {'W': list(), 'f': list()}
 
+        # final nonlinearity
+        self.final_nonlin_function = getattr(nonlinearities, final_nonlinearity)
+
     def f_df(self, W, f, data, param_gradient=None):
         """
         Evaluate the negative log-likelihood objective and gradient for the LNLN model class
@@ -661,13 +671,13 @@ class LNLN(NeuralEncodingModel):
         m = (data['rate'].size - tau + 1)
 
         # estimate firing rate and get model response
-        u, z, zgrad, logr, r = self.rate({'W': W, 'f': f}, data['stim'])
+        u, z, zgrad, drdz, r = self.rate({'W': W, 'f': f}, data['stim'])
 
-        # objective in bits (log-likelihood difference between model and mean firing rates)
-        obj_value = np.mean(r - data['rate'] * logr)
+        # objective in bits (poisson log-likelihood)
+        obj_value = np.mean(r - data['rate'] * np.log(r))
 
-        # factor in front of the gradient
-        grad_factor = r - data['rate']  # dims: (M)
+        # factor in front of the gradient (poisson log-likelihood)
+        grad_factor = (1 - data['rate'] / r) * drdz  # dims: (M)
 
         # compute gradient
         if param_gradient == 'W':
@@ -809,7 +819,8 @@ class LNLN(NeuralEncodingModel):
         data = self.data[data_index]
 
         # compute the model firing rate
-        logr, rhat = self.rate(theta, data['stim'])[-2:]
+        rhat = self.rate(theta, data['stim'])[-1]
+        logr = np.log(rhat)
 
         # correlation coefficient
         cc = float(np.corrcoef(np.vstack((rhat, data['rate'])))[0, 1])
@@ -831,7 +842,7 @@ class LNLN(NeuralEncodingModel):
 
         """
 
-        u, z, zgrad, logr, r = self.rate(self.theta, stim)
+        u, z, zgrad, drdz, r = self.rate(self.theta, stim)
 
         xgrad = np.zeros_like(np.squeeze(stim))
         for idx in range(self.theta['W'].shape[0]):
@@ -857,7 +868,7 @@ class LNLN(NeuralEncodingModel):
         u : array_like
         z : array_like
         zgrad : array_like
-        logr : array_like
+        drdz : array_like
         r : array_like
 
         """
@@ -869,10 +880,9 @@ class LNLN(NeuralEncodingModel):
         z, zgrad = tentbasis.eval_tents(u, self.tentparams)
 
         # compute log(rate) and the firing rate
-        logr = np.tensordot(theta['f'], z, ([0, 1], [0, 2]))  # dims: (M)
-        r = np.exp(logr)  # dims: (M)
+        r, drdz = self.final_nonlin_function(np.tensordot(theta['f'], z, ([0, 1], [0, 2])))  # dims: (M)
 
-        return u, z, zgrad, logr, r
+        return u, z, zgrad, drdz, r
 
 
 def _rolling_window(a, window):

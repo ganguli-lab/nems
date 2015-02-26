@@ -69,6 +69,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../api.html#module-nems.models">nems.models</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api.html#module-nems.objectives">nems.objectives</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#module-nems.nonlinearities">nems.nonlinearities</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api.html#module-nems.tentbasis">nems.tentbasis</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api.html#module-nems.sensitivity">nems.sensitivity</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api.html#module-nems.simulate">nems.simulate</a></li>
@@ -76,7 +77,9 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../changelog.html#v0-2-work-in-progress">v0.2 (Work in Progress)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../changelog.html#roadmap-looking-ahead-to-v1-0">Roadmap (looking ahead to v1.0)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../changelog.html#releases">Releases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../changelog.html#v0-2-february-25-2015">v0.2 (February 25, 2015)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../changelog.html#v0-1-february-22-2015">v0.1 (February 22, 2015)</a></li>
 </ul>
 </li>
@@ -131,9 +134,9 @@
 
 <span class="sd">.. math:: f(x) = \sum_i w_i \phi(x-i)</span>
 
-<span class="sd">where each tent function \phi is a _fixed_ basis function, shifted</span>
-<span class="sd">along the input dimension to tile the input space. The function f(x)</span>
-<span class="sd">is parameterized as a linear combination (with weights given by \alpha)</span>
+<span class="sd">where each tent function :math:`\phi` is a _fixed_ basis function, shifted</span>
+<span class="sd">along the input dimension to tile the input space. The function :math:`f(x)`</span>
+<span class="sd">is parameterized as a linear combination (with weights given by :math:`\alpha`)</span>
 <span class="sd">of these tent functions.</span>
 
 <span class="sd">&quot;&quot;&quot;</span>
