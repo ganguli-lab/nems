@@ -26,11 +26,12 @@ import copy
 from functools import partial
 import numpy as np
 from . import tentbasis
+from . import nonlinearities
+from . import utilities
 from .sfo_admm import SFO
 from proxalgs.core import Optimizer
 from proxalgs import operators
 import pandas as pd
-import nonlinearities
 import tableprint
 
 # exports
@@ -73,7 +74,7 @@ class NeuralEncodingModel(object):
             num_minibatches = int(self.num_samples / minibatch_size)
 
         # slice the z-scored stimulus every tau samples, for easier dot products
-        slices = _rolling_window((stimulus - np.mean(stimulus)) / np.std(stimulus), self.tau)
+        slices = utilities.rolling_window((stimulus - np.mean(stimulus)) / np.std(stimulus), self.tau)
 
         # store stimulus and rate data for each minibatch in a list
         self.data = list()
@@ -317,11 +318,11 @@ class LN(NeuralEncodingModel):
                                                                     "are inconsistent with the given filter dimensions."
 
             # normalize the given filters
-            self.theta_init['W'][0] = _nrm(kwargs['W'][0])
+            self.theta_init['W'][0] = utilities.nrm(kwargs['W'][0])
 
         # initialize with the STA
         else:
-            self.theta_init['W'][0] = _nrm(self.sta).reshape(-1, self.sta.shape[-1])
+            self.theta_init['W'][0] = utilities.nrm(self.sta).reshape(-1, self.sta.shape[-1])
 
         # initialize nonlinearity parameters
         if 'f' in kwargs:
@@ -492,7 +493,7 @@ class LN(NeuralEncodingModel):
             Wk = optimize_param(f_df_wrapper, 'W').copy()
 
             # normalize filter
-            theta_current['W'][0] = _nrm(Wk[0])
+            theta_current['W'][0] = utilities.nrm(Wk[0])
 
         # store learned parameters
         self.theta = copy.deepcopy(theta_current)
@@ -596,18 +597,18 @@ class LNLN(NeuralEncodingModel):
 
             # normalize each of the given filters
             for idx, w in enumerate(kwargs['W']):
-                self.theta_init['W'][idx] = _nrm(w)
+                self.theta_init['W'][idx] = utilities.nrm(w)
 
         else:
 
             # multiple subunits: random initialization
             if self.num_subunits > 1:
                 for idx in range(self.num_subunits):
-                    self.theta_init['W'][idx] = _nrm(0.1 * np.random.randn(self.stim_dim, self.tau))
+                    self.theta_init['W'][idx] = utilities.nrm(0.1 * np.random.randn(self.stim_dim, self.tau))
 
             # single subunit: initialize with the STA
             else:
-                self.theta_init['W'][0] = _nrm(self.sta).reshape(-1,self.sta.shape[-1])
+                self.theta_init['W'][0] = utilities.nrm(self.sta).reshape(-1,self.sta.shape[-1])
 
         # initialize nonlinearity parameters
         if 'f' in kwargs:
@@ -781,7 +782,7 @@ class LNLN(NeuralEncodingModel):
 
             # normalize filters
             for filter_index in range(Wk.shape[0]):
-                theta_current['W'][filter_index] = _nrm(Wk[filter_index])
+                theta_current['W'][filter_index] = utilities.nrm(Wk[filter_index])
 
             # run the callback
             self.print_test_results(theta_current)
@@ -883,60 +884,3 @@ class LNLN(NeuralEncodingModel):
         r, drdz = self.final_nonlin_function(np.tensordot(theta['f'], z, ([0, 1], [0, 2])))  # dims: (M)
 
         return u, z, zgrad, drdz, r
-
-
-def _rolling_window(a, window):
-    """
-    Make an ndarray with a rolling window of the last dimension
-
-    Parameters
-    ----------
-    a : array_like
-        Array to add rolling window to
-    window : int
-        Size of rolling window
-
-    Returns
-    -------
-    Array that is a view of the original array with a added dimension
-    of size w.
-
-    Examples
-    --------
-    >>> x=np.arange(10).reshape((2,5))
-    >>> rolling_window(x, 3)
-    array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]],
-           [[5, 6, 7], [6, 7, 8], [7, 8, 9]]])
-
-    Calculate rolling mean of last dimension:
-
-    >>> np.mean(rolling_window(x, 3), -1)
-    array([[ 1.,  2.,  3.],
-           [ 6.,  7.,  8.]])
-
-    """
-    assert window >= 1, "`window` must be at least 1."
-    assert window < a.shape[-1], "`window` is too long."
-
-    # # with strides
-    shape = a.shape[:-1] + (a.shape[-1] - window, window)
-    strides = a.strides + (a.strides[-1],)
-    return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
-
-
-def _nrm(x):
-    """
-    Normalizes data in the given array x by the (vectorized) 2-norm
-
-    Parameters
-    ----------
-    x : array_like
-        The input to be normalized
-
-    Returns
-    -------
-    xn : array_like
-        A version of the input array that has been scaled so it has a unit vectorized 2-norm
-
-    """
-    return x / np.linalg.norm(x.ravel())
