@@ -42,15 +42,16 @@ class NeuralEncodingModel(object):
 
     """
 
-    def __init__(self, modeltype, stimulus, rate, filter_dims, minibatch_size, frac_train=0.8, spikes=None):
+    def __init__(self, modeltype, stimulus, rate, filter_dims, minibatch_size, frac_train=0.8, spikes=None, pad=True):
 
         # model name / subclass
         self.modeltype = str.lower(modeltype)
 
         # model properties
         self.theta = None
-        self.num_samples = rate.size
         self.tau = filter_dims[-1]
+        #rate = rate[self.tau:]
+        self.num_samples = np.sum(map(len, rate))
         self.filter_dims = filter_dims
         self.stim_dim = np.prod(filter_dims[:-1])
 
@@ -58,7 +59,7 @@ class NeuralEncodingModel(object):
         assert self.tau <= self.num_samples, 'The temporal filter length must be less than the experiment length.'
 
         # filter dimensions must be (n1 x n2 x tau), while the stimulus dimensions should be (n1*n2 x t)
-        assert stimulus.shape[0] == self.stim_dim, 'Stimulus size does not match up with filter dimensions'
+        #assert stimulus.shape[0] == self.stim_dim, 'Stimulus size does not match up with filter dimensions'
 
         # split data into minibatches
         if minibatch_size is None:
@@ -72,7 +73,20 @@ class NeuralEncodingModel(object):
             num_minibatches = int(self.num_samples / minibatch_size)
 
         # slice the z-scored stimulus every tau samples, for easier dot products
-        slices = _rolling_window((stimulus - np.mean(stimulus)) / np.std(stimulus), self.tau)
+
+
+        if pad:
+            stimulus = [np.hstack((np.zeros((stim.shape[0], self.tau)), stim)) for stim in stimulus]
+
+        slices = np.hstack([_rolling_window(stim, self.tau)[:, :]  for stim in stimulus])
+        slices = (slices - slices.mean(1, keepdims=True)) / slices.std(1, keepdims=True)
+        #stimulus = stimulus[0]
+        #slices = _rolling_window((stimulus - np.mean(stimulus,1, keepdims=True)) / np.std(stimulus,1, keepdims=True), self.tau)
+
+        rate = np.hstack(rate)
+        rate = rate - rate.mean()
+
+        print slices.shape, rate.shape
 
         # store stimulus and rate data for each minibatch in a list
         self.data = list()
@@ -211,6 +225,20 @@ class NeuralEncodingModel(object):
 
         return df, avg
 
+    def predict(self, stims, pad=True):
+        if not isinstance(stims, list) and not stims.ndim == 1:
+            stims = [stims]
+        rates = []
+        for stim in stims:
+            if pad:
+                stim = np.hstack((np.zeros((stim.shape[0], self.tau)), stim))
+            stim = _rolling_window(stim, self.tau)
+            rate = self._rate(self.theta, stim)[-1]
+            rates.append(rate)
+        if len(rates) == 1:
+            rates = rates[0]
+        return rates
+
 class LNExp(NeuralEncodingModel):
     def __init__(self, stim, rate, filter_dims, minibatch_size=None, frac_train=0.8, num_tents=30, sigmasq=0.2,
                  tent_type='gaussian', spikes=None, **kwargs):
@@ -271,10 +299,16 @@ class LNExp(NeuralEncodingModel):
 
         # initialize with the STA
         #else:
-        self.theta_init['W'][0] = (self.sta).reshape(-1, self.sta.shape[-1])
+        self.theta_init['W'][0] = (self.sta).reshape(-1, self.sta.shape[-1])/100.0
+        #self.theta_init['W'][0] = np.random.randn(*self.theta_init['W'][0].shape)
 
         # initialize regularizers
         self.regularizers = {'W': list(), 'b': list(), 'c' : list()}
+        self.nonlin = lambda x:x
+        self.dnonlin = lambda x: np.ones_like(x)
+        #self.nonlin = lambda x: np.exp(x)
+        #self.dnonlin = lambda x: np.exp(x)
+
 
     def f_df(self, params, data, param_gradient=None):
         """
@@ -309,9 +343,10 @@ class LNExp(NeuralEncodingModel):
         m = float(rdiff.size)
 
         dc = rdiff.mean()
-        du = rdiff * np.exp(u)
+        du = rdiff * self.dnonlin(u)
         db = du.mean()
         dw = np.tensordot(du, data['stim'], ([1], [1])) / float(m)
+        #dw += 0.001 * np.sign(W)
 #        dw = np.zeros_like(W)
         obj_gradient = dict(W=dw, b=db, c=dc)
         return obj_value, obj_gradient
@@ -358,7 +393,8 @@ class LNExp(NeuralEncodingModel):
 
         u += theta['b']
 
-        r = np.exp(u) + theta['c']
+        #r = np.exp(u) + theta['c']
+        r = self.nonlin(u) + theta['c']
 
         # evaluate the input at the tent basis function
         #z, zgrad = tentbasis.eval_tents(u, self.tentparams)
@@ -367,7 +403,7 @@ class LNExp(NeuralEncodingModel):
         #r = np.tensordot(theta['f'], z, ([0, 1], [0, 2]))
         #logr = np.log(r)
 
-        return u, r
+        return u, r.squeeze()
 
     def fit(self, num_passes=10, display=0):
         """
@@ -399,6 +435,7 @@ class LNExp(NeuralEncodingModel):
         train_data = [self.data[idx] for idx in self.train_indices]
 
         opt = SFO_orig(self.f_df, theta_current, train_data, display=display)
+        self.opt = opt
         #opt.check_grad()
         #1/0
         theta_current = opt.optimize(num_passes=num_passes)
