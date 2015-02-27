@@ -79,12 +79,20 @@ class NeuralEncodingModel(object):
             stimulus = [np.hstack((np.zeros((stim.shape[0], self.tau)), stim)) for stim in stimulus]
 
         slices = np.hstack([_rolling_window(stim, self.tau)[:, :]  for stim in stimulus])
-        slices = (slices - slices.mean(1, keepdims=True)) / slices.std(1, keepdims=True)
+        self.stim_mean = slices.mean(1, keepdims=True)
+        self.stim_std = slices.std(1, keepdims=True)
+        self.normalize_stim = lambda s : (s - self.stim_mean) / self.stim_std
+        slices = self.normalize_stim(slices)
         #stimulus = stimulus[0]
         #slices = _rolling_window((stimulus - np.mean(stimulus,1, keepdims=True)) / np.std(stimulus,1, keepdims=True), self.tau)
 
         rate = np.hstack(rate)
-        rate = rate - rate.mean()
+        self.rate_mean = rate.mean()
+        rate = rate - self.rate_mean
+
+        #perm = np.random.permutation(len(rate))
+        #rate = rate[perm]
+        #slices = slices[:, perm, :]
 
         print slices.shape, rate.shape
 
@@ -229,15 +237,20 @@ class NeuralEncodingModel(object):
         if not isinstance(stims, list) and not stims.ndim == 1:
             stims = [stims]
         rates = []
+        us = []
         for stim in stims:
             if pad:
                 stim = np.hstack((np.zeros((stim.shape[0], self.tau)), stim))
             stim = _rolling_window(stim, self.tau)
-            rate = self._rate(self.theta, stim)[-1]
+            stim = self.normalize_stim(stim)
+            u, r = self._rate(self.theta, stim)
+            rate = r + self.rate_mean
             rates.append(rate)
+            us.append(u)
         if len(rates) == 1:
             rates = rates[0]
-        return rates
+            us = us[0]
+        return us, rates
 
 class LNExp(NeuralEncodingModel):
     def __init__(self, stim, rate, filter_dims, minibatch_size=None, frac_train=0.8, num_tents=30, sigmasq=0.2,
@@ -299,15 +312,18 @@ class LNExp(NeuralEncodingModel):
 
         # initialize with the STA
         #else:
-        self.theta_init['W'][0] = (self.sta).reshape(-1, self.sta.shape[-1])/100.0
+        self.theta_init['W'][0] = (self.sta).reshape(-1, self.sta.shape[-1]) / 10
         #self.theta_init['W'][0] = np.random.randn(*self.theta_init['W'][0].shape)
 
         # initialize regularizers
         self.regularizers = {'W': list(), 'b': list(), 'c' : list()}
         self.nonlin = lambda x:x
         self.dnonlin = lambda x: np.ones_like(x)
-        #self.nonlin = lambda x: np.exp(x)
-        #self.dnonlin = lambda x: np.exp(x)
+        self.nonlin = lambda x: np.exp(x)
+        self.dnonlin = lambda x: np.exp(x)
+
+        self.nonlin = lambda x: np.log(1 + np.exp(x))
+        self.dnonlin = lambda x: np.exp(x) / (1 + np.exp(x))
 
 
     def f_df(self, params, data, param_gradient=None):
@@ -345,8 +361,9 @@ class LNExp(NeuralEncodingModel):
         dc = rdiff.mean()
         du = rdiff * self.dnonlin(u)
         db = du.mean()
+        #db = 0
         dw = np.tensordot(du, data['stim'], ([1], [1])) / float(m)
-        #dw += 0.001 * np.sign(W)
+#        dw += 0.001 * np.sign(W) + 0.1 * W
 #        dw = np.zeros_like(W)
         obj_gradient = dict(W=dw, b=db, c=dc)
         return obj_value, obj_gradient
