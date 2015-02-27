@@ -7,7 +7,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Changelog &mdash; nems 0.1 documentation</title>
+  <title>Changelog &mdash; nems 0.2.1 documentation</title>
   
 
   
@@ -28,7 +28,7 @@
   
 
   
-    <link rel="top" title="nems 0.1 documentation" href="index.html"/> 
+    <link rel="top" title="nems 0.2.1 documentation" href="index.html"/> 
 
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
@@ -77,7 +77,7 @@
 </li>
 <li class="toctree-l1 current"><a class="current reference internal" href="">Changelog</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#roadmap-looking-ahead-to-v1-0">Roadmap (looking ahead to v1.0)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#releases">Releases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#v0-3-work-in-progress">v0.3 (Work in progress)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#v0-2-february-25-2015">v0.2 (February 25, 2015)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#v0-1-february-22-2015">v0.1 (February 22, 2015)</a></li>
 </ul>
@@ -127,15 +127,28 @@
 <li>Write some tests where we recover simulated model parameters</li>
 </ul>
 </div>
-<div class="section" id="releases">
-<h2>Releases<a class="headerlink" href="#releases" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="v0-3-work-in-progress">
+<h2>v0.3 (Work in progress)<a class="headerlink" href="#v0-3-work-in-progress" title="Permalink to this headline">¶</a></h2>
+<p>Current focus: adding a separate <tt class="docutils literal"><span class="pre">objectives</span></tt> that lets you plug and play different kinds of noise models,
+such as gaussian (mean squared error) or poisson.</p>
+<div class="section" id="new-features">
+<h3>New Features<a class="headerlink" href="#new-features" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Information about algorithm convergence is stored in two data frames, <tt class="docutils literal"><span class="pre">models.metadata</span></tt> and <tt class="docutils literal"><span class="pre">models.convergence</span></tt>. The first stores the primal and dual residuals and runtimes for each leg of the alternating minimization, and the second stores metrics evaluated on held out data at each alternating iteration.</li>
+</ul>
+</div>
+<div class="section" id="api-changes">
+<h3>API Changes<a class="headerlink" href="#api-changes" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Moved helper functions to a separate module, contained in <tt class="docutils literal"><span class="pre">utilities.py</span></tt></li>
+</ul>
+</div>
 </div>
 <div class="section" id="v0-2-february-25-2015">
 <h2>v0.2 (February 25, 2015)<a class="headerlink" href="#v0-2-february-25-2015" title="Permalink to this headline">¶</a></h2>
-<p>Work in progress. Current focus: adding a separate <tt class="docutils literal"><span class="pre">objectives</span></tt> that lets you plug and play different kinds of noise models,
-such as gaussian (mean squared error) or poisson. Also: ability to use different final nonlinearities (instead of just the exponential).</p>
-<div class="section" id="new-features">
-<h3>New Features<a class="headerlink" href="#new-features" title="Permalink to this headline">¶</a></h3>
+<p>Main updates: added the ability to use different final nonlinearities (instead of just the exponential), and pretty printing of optimization results using the <tt class="docutils literal"><span class="pre">tableprint</span></tt> module</p>
+<div class="section" id="id1">
+<h3>New Features<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
 <li>Added a <tt class="docutils literal"><span class="pre">nonlinearities.py</span></tt> module that lets you customize the final model nonlinearity</li>
 <li>Added a <tt class="docutils literal"><span class="pre">check_grad</span></tt> option to the <tt class="docutils literal"><span class="pre">LNLN.fit</span></tt> method, for numerically validating analytical gradients</li>
@@ -144,17 +157,13 @@ such as gaussian (mean squared error) or poisson. Also: ability to use different
 <li>Added the <tt class="docutils literal"><span class="pre">tableprint</span></tt> module as a dependency</li>
 </ul>
 </div>
-<div class="section" id="api-changes">
-<h3>API Changes<a class="headerlink" href="#api-changes" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id2">
+<h3>API Changes<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
 <li>Added the ability to specify custom final nonlinearities in <tt class="docutils literal"><span class="pre">LNLN</span></tt>, using the <tt class="docutils literal"><span class="pre">nonlinearities</span></tt> module</li>
-<li>Changed how the <tt class="docutils literal"><span class="pre">LNLN.rate()</span></tt> function works, it now returns the derivative of the final nonlinearity (instead of the log firing rate).</li>
+<li>Changed how the <tt class="docutils literal"><span class="pre">LNLN.rate()</span></tt> function works, it now returns the derivative of the final nonlinearity (instead of the log firing rate). This is used internally in <tt class="docutils literal"><span class="pre">LNLN.fit()</span></tt> to compute the objective and gradient using different final nonlinearities</li>
+<li>The <tt class="docutils literal"><span class="pre">test()</span></tt> function now expects the parameters to get passed in, instead of using <tt class="docutils literal"><span class="pre">self.theta</span></tt>. The <tt class="docutils literal"><span class="pre">metrics</span></tt> function in each subclass of <tt class="docutils literal"><span class="pre">NeuralEncodingModel</span></tt> should accept a dictionary of parameters in addition to the index of the minibatch to test. This was necessary to be able to test the model on held out data during optimization (before the final parameters were saved in <tt class="docutils literal"><span class="pre">self.theta</span></tt>)</li>
 </ul>
-<p>This is used internally in <tt class="docutils literal"><span class="pre">LNLN.fit()</span></tt> to compute the objective and gradient using different final nonlinearities
-- The <tt class="docutils literal"><span class="pre">test()</span></tt> function now expects the parameters to get passed in, instead of using <tt class="docutils literal"><span class="pre">self.theta</span></tt>. The <tt class="docutils literal"><span class="pre">metrics</span></tt>
-function in each subclass of <tt class="docutils literal"><span class="pre">NeuralEncodingModel</span></tt> should accept a dictionary of parameters in addition to the index
-of the minibatch to test. This was necessary to be able to test the model on held out data during optimization (before
-the final parameters were saved in <tt class="docutils literal"><span class="pre">self.theta</span></tt>)</p>
 </div>
 </div>
 <div class="section" id="v0-1-february-22-2015">
@@ -164,11 +173,10 @@ the final parameters were saved in <tt class="docutils literal"><span class="pre
 <div class="section" id="api-overview">
 <h3>API Overview<a class="headerlink" href="#api-overview" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
-<li>Functionality split between the <tt class="docutils literal"><span class="pre">NeuralEncodingModel</span></tt> class and its subclasses. I&#8217;m trying to keep things general</li>
+<li>Functionality split between the <tt class="docutils literal"><span class="pre">NeuralEncodingModel</span></tt> class and its subclasses. I&#8217;m trying to keep things general to all encoding models in the <tt class="docutils literal"><span class="pre">NeuralEncodingModel</span></tt> class.</li>
+<li>Build a subclass, the <tt class="docutils literal"><span class="pre">LNLN</span></tt> model class, that lets you fit two layer linear-nonlinear cascade models to data</li>
+<li>Functions for dealing with tent basis functions (useful for fitting generic nonlinearities) are included in <tt class="docutils literal"><span class="pre">tentbasis.py</span></tt></li>
 </ul>
-<p>to all encoding models in the <tt class="docutils literal"><span class="pre">NeuralEncodingModel</span></tt> class.
-- Build a subclass, the <tt class="docutils literal"><span class="pre">LNLN</span></tt> model class, that lets you fit two layer linear-nonlinear cascade models to data
-- Functions for dealing with tent basis functions (useful for fitting generic nonlinearities) are included in <tt class="docutils literal"><span class="pre">tentbasis.py</span></tt></p>
 </div>
 <div class="section" id="roadmap">
 <h3>Roadmap<a class="headerlink" href="#roadmap" title="Permalink to this headline">¶</a></h3>
@@ -211,7 +219,7 @@ the final parameters were saved in <tt class="docutils literal"><span class="pre
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.1',
+            VERSION:'0.2.1',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

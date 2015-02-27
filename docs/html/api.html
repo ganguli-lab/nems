@@ -7,7 +7,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>API Reference &mdash; nems 0.1 documentation</title>
+  <title>API Reference &mdash; nems 0.2.1 documentation</title>
   
 
   
@@ -28,7 +28,7 @@
   
 
   
-    <link rel="top" title="nems 0.1 documentation" href="index.html"/>
+    <link rel="top" title="nems 0.2.1 documentation" href="index.html"/>
         <link rel="prev" title="Quickstart" href="quickstart.html"/> 
 
   
@@ -78,7 +78,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="changelog.html#roadmap-looking-ahead-to-v1-0">Roadmap (looking ahead to v1.0)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="changelog.html#releases">Releases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#v0-3-work-in-progress">v0.3 (Work in progress)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="changelog.html#v0-2-february-25-2015">v0.2 (February 25, 2015)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="changelog.html#v0-1-february-22-2015">v0.1 (February 22, 2015)</a></li>
 </ul>
@@ -140,7 +140,7 @@ recorded in an experiment. For more information, see the documentation (TODO: we
 <p>Coming soon</p>
 <dl class="class">
 <dt id="nems.models.NeuralEncodingModel">
-<em class="property">class </em><tt class="descclassname">nems.models.</tt><tt class="descname">NeuralEncodingModel</tt><big>(</big><em>modeltype</em>, <em>stimulus</em>, <em>rate</em>, <em>filter_dims</em>, <em>minibatch_size</em>, <em>frac_train=0.8</em>, <em>spikes=None</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#NeuralEncodingModel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.NeuralEncodingModel" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">nems.models.</tt><tt class="descname">NeuralEncodingModel</tt><big>(</big><em>modeltype</em>, <em>stimulus</em>, <em>rate</em>, <em>filter_dims</em>, <em>minibatch_size</em>, <em>frac_train=0.8</em>, <em>spikes=None</em><big>)</big><a class="headerlink" href="#nems.models.NeuralEncodingModel" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="http://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></a></p>
 <p>Neural enoding model object</p>
 <p class="rubric">Methods</p>
@@ -163,7 +163,7 @@ recorded in an experiment. For more information, see the documentation (TODO: we
 </table>
 <dl class="method">
 <dt id="nems.models.NeuralEncodingModel.add_regularizer">
-<tt class="descname">add_regularizer</tt><big>(</big><em>theta_key</em>, <em>proxfun</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#NeuralEncodingModel.add_regularizer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.NeuralEncodingModel.add_regularizer" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">add_regularizer</tt><big>(</big><em>theta_key</em>, <em>proxfun</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#nems.models.NeuralEncodingModel.add_regularizer" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add a proximal operator / objective to the objective, using the proxalgs package</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -189,7 +189,7 @@ recorded in an experiment. For more information, see the documentation (TODO: we
 
 <dl class="method">
 <dt id="nems.models.NeuralEncodingModel.print_test_results">
-<tt class="descname">print_test_results</tt><big>(</big><em>theta</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#NeuralEncodingModel.print_test_results"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.NeuralEncodingModel.print_test_results" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">print_test_results</tt><big>(</big><em>theta</em><big>)</big><a class="headerlink" href="#nems.models.NeuralEncodingModel.print_test_results" title="Permalink to this definition">¶</a></dt>
 <dd><p>Prints a table of test results for the given model parameters</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -207,7 +207,7 @@ recorded in an experiment. For more information, see the documentation (TODO: we
 
 <dl class="method">
 <dt id="nems.models.NeuralEncodingModel.test">
-<tt class="descname">test</tt><big>(</big><em>theta</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#NeuralEncodingModel.test"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.NeuralEncodingModel.test" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">test</tt><big>(</big><em>theta</em><big>)</big><a class="headerlink" href="#nems.models.NeuralEncodingModel.test" title="Permalink to this definition">¶</a></dt>
 <dd><p>Evaluate the model on held out data</p>
 <p>Relies on the model subclass having a <cite>metrics</cite> method, which accepts an index into the data array and returns
 a dictionary containing various metrics evaluated given the current value of the parameters (<cite>theta</cite>) on the
@@ -249,7 +249,7 @@ held out data as follows:</p>
 
 <dl class="class">
 <dt id="nems.models.LNLN">
-<em class="property">class </em><tt class="descclassname">nems.models.</tt><tt class="descname">LNLN</tt><big>(</big><em>stim</em>, <em>rate</em>, <em>filter_dims</em>, <em>minibatch_size=None</em>, <em>frac_train=0.8</em>, <em>num_subunits=1</em>, <em>num_tents=30</em>, <em>sigmasq=0.2</em>, <em>tent_type='gaussian'</em>, <em>final_nonlinearity='softrect'</em>, <em>spikes=None</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#LNLN"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LNLN" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">nems.models.</tt><tt class="descname">LNLN</tt><big>(</big><em>stim</em>, <em>rate</em>, <em>filter_dims</em>, <em>minibatch_size=None</em>, <em>frac_train=0.8</em>, <em>num_subunits=1</em>, <em>num_tents=30</em>, <em>sigmasq=0.2</em>, <em>tent_type='gaussian'</em>, <em>final_nonlinearity='softrect'</em>, <em>spikes=None</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#nems.models.LNLN" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#nems.models.NeuralEncodingModel" title="nems.models.NeuralEncodingModel"><tt class="xref py py-class docutils literal"><span class="pre">nems.models.NeuralEncodingModel</span></tt></a></p>
 <p class="rubric">Methods</p>
 <table border="1" class="longtable docutils">
@@ -283,7 +283,7 @@ held out data as follows:</p>
 </table>
 <dl class="method">
 <dt id="nems.models.LNLN.f_df">
-<tt class="descname">f_df</tt><big>(</big><em>W</em>, <em>f</em>, <em>data</em>, <em>param_gradient=None</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#LNLN.f_df"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LNLN.f_df" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">f_df</tt><big>(</big><em>W</em>, <em>f</em>, <em>data</em>, <em>param_gradient=None</em><big>)</big><a class="headerlink" href="#nems.models.LNLN.f_df" title="Permalink to this definition">¶</a></dt>
 <dd><p>Evaluate the negative log-likelihood objective and gradient for the LNLN model class</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -327,7 +327,7 @@ held out data as follows:</p>
 
 <dl class="method">
 <dt id="nems.models.LNLN.fit">
-<tt class="descname">fit</tt><big>(</big><em>num_alt=2</em>, <em>max_iter=20</em>, <em>num_likelihood_steps=50</em>, <em>disp=2</em>, <em>check_grad=None</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#LNLN.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LNLN.fit" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">fit</tt><big>(</big><em>num_alt=2</em>, <em>max_iter=20</em>, <em>num_likelihood_steps=50</em>, <em>disp=2</em>, <em>check_grad=None</em><big>)</big><a class="headerlink" href="#nems.models.LNLN.fit" title="Permalink to this definition">¶</a></dt>
 <dd><p>Runs an optimization algorithm to learn the parameters of the model given training data and regularizers</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -364,7 +364,7 @@ against a numerical estimate.</p>
 
 <dl class="method">
 <dt id="nems.models.LNLN.metrics">
-<tt class="descname">metrics</tt><big>(</big><em>data_index</em>, <em>theta</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#LNLN.metrics"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LNLN.metrics" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">metrics</tt><big>(</big><em>data_index</em>, <em>theta</em><big>)</big><a class="headerlink" href="#nems.models.LNLN.metrics" title="Permalink to this definition">¶</a></dt>
 <dd><p>Evaluate metrics on a given minibatch.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -400,7 +400,7 @@ minibatch, and whose values are single numbers.</p>
 
 <dl class="method">
 <dt id="nems.models.LNLN.rate">
-<tt class="descname">rate</tt><big>(</big><em>theta</em>, <em>stim</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#LNLN.rate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LNLN.rate" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">rate</tt><big>(</big><em>theta</em>, <em>stim</em><big>)</big><a class="headerlink" href="#nems.models.LNLN.rate" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute the model response given parameters</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -425,7 +425,7 @@ minibatch, and whose values are single numbers.</p>
 
 <dl class="class">
 <dt id="nems.models.LN">
-<em class="property">class </em><tt class="descclassname">nems.models.</tt><tt class="descname">LN</tt><big>(</big><em>stim</em>, <em>rate</em>, <em>filter_dims</em>, <em>minibatch_size=None</em>, <em>frac_train=0.8</em>, <em>num_tents=30</em>, <em>sigmasq=0.2</em>, <em>tent_type='gaussian'</em>, <em>spikes=None</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#LN"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LN" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">nems.models.</tt><tt class="descname">LN</tt><big>(</big><em>stim</em>, <em>rate</em>, <em>filter_dims</em>, <em>minibatch_size=None</em>, <em>frac_train=0.8</em>, <em>num_tents=30</em>, <em>sigmasq=0.2</em>, <em>tent_type='gaussian'</em>, <em>spikes=None</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#nems.models.LN" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#nems.models.NeuralEncodingModel" title="nems.models.NeuralEncodingModel"><tt class="xref py py-class docutils literal"><span class="pre">nems.models.NeuralEncodingModel</span></tt></a></p>
 <p class="rubric">Methods</p>
 <table border="1" class="longtable docutils">
@@ -459,7 +459,7 @@ minibatch, and whose values are single numbers.</p>
 </table>
 <dl class="method">
 <dt id="nems.models.LN.f_df">
-<tt class="descname">f_df</tt><big>(</big><em>W</em>, <em>f</em>, <em>data</em>, <em>param_gradient=None</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#LN.f_df"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LN.f_df" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">f_df</tt><big>(</big><em>W</em>, <em>f</em>, <em>data</em>, <em>param_gradient=None</em><big>)</big><a class="headerlink" href="#nems.models.LN.f_df" title="Permalink to this definition">¶</a></dt>
 <dd><p>Objective and gradient for fitting the LN model</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -481,7 +481,7 @@ minibatch, and whose values are single numbers.</p>
 
 <dl class="method">
 <dt id="nems.models.LN.fit">
-<tt class="descname">fit</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/nems/models.html#LN.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LN.fit" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">fit</tt><big>(</big><big>)</big><a class="headerlink" href="#nems.models.LN.fit" title="Permalink to this definition">¶</a></dt>
 <dd><p>Runs an optimization algorithm to learn the parameters of the model given training data and regularizers</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -509,13 +509,13 @@ minibatch, and whose values are single numbers.</p>
 
 <dl class="method">
 <dt id="nems.models.LN.metrics">
-<tt class="descname">metrics</tt><big>(</big><em>data_index</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#LN.metrics"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LN.metrics" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">metrics</tt><big>(</big><em>data_index</em><big>)</big><a class="headerlink" href="#nems.models.LN.metrics" title="Permalink to this definition">¶</a></dt>
 <dd><p>Evaluate metrics on a given minibatch</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="nems.models.LN.rate">
-<tt class="descname">rate</tt><big>(</big><em>theta</em>, <em>stim</em><big>)</big><a class="reference internal" href="_modules/nems/models.html#LN.rate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.models.LN.rate" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">rate</tt><big>(</big><em>theta</em>, <em>stim</em><big>)</big><a class="headerlink" href="#nems.models.LN.rate" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute the model response given parameters</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -547,12 +547,12 @@ minibatch, and whose values are single numbers.</p>
 parameters and experimental data.</p>
 <dl class="function">
 <dt id="nems.objectives.gaussian_loglikelihood">
-<tt class="descclassname">nems.objectives.</tt><tt class="descname">gaussian_loglikelihood</tt><big>(</big><em>theta</em>, <em>data</em>, <em>modelrate</em>, <em>dt</em>, <em>regularizers</em>, <em>keys=None</em><big>)</big><a class="reference internal" href="_modules/nems/objectives.html#gaussian_loglikelihood"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.objectives.gaussian_loglikelihood" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">nems.objectives.</tt><tt class="descname">gaussian_loglikelihood</tt><big>(</big><em>theta</em>, <em>data</em>, <em>modelrate</em>, <em>dt</em>, <em>regularizers</em>, <em>keys=None</em><big>)</big><a class="headerlink" href="#nems.objectives.gaussian_loglikelihood" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="function">
 <dt id="nems.objectives.poisson_loglikelihood">
-<tt class="descclassname">nems.objectives.</tt><tt class="descname">poisson_loglikelihood</tt><big>(</big><em>theta</em>, <em>data</em>, <em>theta_fixed</em>, <em>modelrate</em>, <em>dt</em>, <em>regularizers</em><big>)</big><a class="reference internal" href="_modules/nems/objectives.html#poisson_loglikelihood"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.objectives.poisson_loglikelihood" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">nems.objectives.</tt><tt class="descname">poisson_loglikelihood</tt><big>(</big><em>theta</em>, <em>data</em>, <em>theta_fixed</em>, <em>modelrate</em>, <em>dt</em>, <em>regularizers</em><big>)</big><a class="headerlink" href="#nems.objectives.poisson_loglikelihood" title="Permalink to this definition">¶</a></dt>
 <dd><p>requirements:</p>
 <p>data[&#8216;rate&#8217;] is (1,m) for m time points
 data[&#8216;stim&#8217;] is (dim, m)</p>
@@ -577,7 +577,7 @@ regularizers[key] is a function that takes as an argument the parameter value</p
 <span class="math">\(y\)</span> and <span class="math">\(dy/dx\)</span></p>
 <dl class="function">
 <dt id="nems.nonlinearities.exp">
-<tt class="descclassname">nems.nonlinearities.</tt><tt class="descname">exp</tt><big>(</big><em>x</em><big>)</big><a class="reference internal" href="_modules/nems/nonlinearities.html#exp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.nonlinearities.exp" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">nems.nonlinearities.</tt><tt class="descname">exp</tt><big>(</big><em>x</em><big>)</big><a class="headerlink" href="#nems.nonlinearities.exp" title="Permalink to this definition">¶</a></dt>
 <dd><p>An exponential function</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -605,7 +605,7 @@ regularizers[key] is a function that takes as an argument the parameter value</p
 
 <dl class="function">
 <dt id="nems.nonlinearities.linear">
-<tt class="descclassname">nems.nonlinearities.</tt><tt class="descname">linear</tt><big>(</big><em>x</em><big>)</big><a class="reference internal" href="_modules/nems/nonlinearities.html#linear"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.nonlinearities.linear" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">nems.nonlinearities.</tt><tt class="descname">linear</tt><big>(</big><em>x</em><big>)</big><a class="headerlink" href="#nems.nonlinearities.linear" title="Permalink to this definition">¶</a></dt>
 <dd><p>A linear function</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -633,7 +633,7 @@ regularizers[key] is a function that takes as an argument the parameter value</p
 
 <dl class="function">
 <dt id="nems.nonlinearities.softrect">
-<tt class="descclassname">nems.nonlinearities.</tt><tt class="descname">softrect</tt><big>(</big><em>x</em><big>)</big><a class="reference internal" href="_modules/nems/nonlinearities.html#softrect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.nonlinearities.softrect" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">nems.nonlinearities.</tt><tt class="descname">softrect</tt><big>(</big><em>x</em><big>)</big><a class="headerlink" href="#nems.nonlinearities.softrect" title="Permalink to this definition">¶</a></dt>
 <dd><p>Soft rectifying function</p>
 <div class="math">
 \[y = \log(1+e^x)\]</div>
@@ -688,7 +688,7 @@ is parameterized as a linear combination (with weights given by <span class="mat
 of these tent functions.</p>
 <dl class="function">
 <dt id="nems.tentbasis.build_tents">
-<tt class="descclassname">nems.tentbasis.</tt><tt class="descname">build_tents</tt><big>(</big><em>num_tent_samples</em>, <em>tent_span</em>, <em>num_tents</em>, <em>tent_type='gaussian'</em>, <em>sigmasq=0.2</em><big>)</big><a class="reference internal" href="_modules/nems/tentbasis.html#build_tents"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.tentbasis.build_tents" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">nems.tentbasis.</tt><tt class="descname">build_tents</tt><big>(</big><em>num_tent_samples</em>, <em>tent_span</em>, <em>num_tents</em>, <em>tent_type='gaussian'</em>, <em>sigmasq=0.2</em><big>)</big><a class="headerlink" href="#nems.tentbasis.build_tents" title="Permalink to this definition">¶</a></dt>
 <dd><p>Initialize tent basis functions
 (used to parameterize nonlinearities)</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -708,7 +708,7 @@ Phi (a matrix whose columns are the basis functions), and centers (an array of t
 
 <dl class="function">
 <dt id="nems.tentbasis.eval_basis">
-<tt class="descclassname">nems.tentbasis.</tt><tt class="descname">eval_basis</tt><big>(</big><em>u</em>, <em>x</em>, <em>Phi</em>, <em>PhiGrad</em><big>)</big><a class="reference internal" href="_modules/nems/tentbasis.html#eval_basis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.tentbasis.eval_basis" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">nems.tentbasis.</tt><tt class="descname">eval_basis</tt><big>(</big><em>u</em>, <em>x</em>, <em>Phi</em>, <em>PhiGrad</em><big>)</big><a class="headerlink" href="#nems.tentbasis.eval_basis" title="Permalink to this definition">¶</a></dt>
 <dd><p>Evaluates a function composed of basis functions given by vectors Phi,
 and derivatives given by vectors PhiGrad.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -725,7 +725,7 @@ and derivatives given by vectors PhiGrad.</p>
 
 <dl class="function">
 <dt id="nems.tentbasis.eval_tents">
-<tt class="descclassname">nems.tentbasis.</tt><tt class="descname">eval_tents</tt><big>(</big><em>u</em>, <em>tentparams</em><big>)</big><a class="reference internal" href="_modules/nems/tentbasis.html#eval_tents"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.tentbasis.eval_tents" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">nems.tentbasis.</tt><tt class="descname">eval_tents</tt><big>(</big><em>u</em>, <em>tentparams</em><big>)</big><a class="headerlink" href="#nems.tentbasis.eval_tents" title="Permalink to this definition">¶</a></dt>
 <dd><p>Evaluate basis functions and derivative at given input value</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -739,7 +739,7 @@ and derivatives given by vectors PhiGrad.</p>
 
 <dl class="function">
 <dt id="nems.tentbasis.make_rcos_basis">
-<tt class="descclassname">nems.tentbasis.</tt><tt class="descname">make_rcos_basis</tt><big>(</big><em>tau</em>, <em>numBases</em>, <em>bias=0.2</em><big>)</big><a class="reference internal" href="_modules/nems/tentbasis.html#make_rcos_basis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.tentbasis.make_rcos_basis" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">nems.tentbasis.</tt><tt class="descname">make_rcos_basis</tt><big>(</big><em>tau</em>, <em>numBases</em>, <em>bias=0.2</em><big>)</big><a class="headerlink" href="#nems.tentbasis.make_rcos_basis" title="Permalink to this definition">¶</a></dt>
 <dd><p>Makes a raised cosine bases (useful for projecting temporal filters)</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -764,13 +764,13 @@ and derivatives given by vectors PhiGrad.</p>
 </div>
 <dl class="function">
 <dt id="nems.sensitivity.ln_hessian">
-<tt class="descclassname">nems.sensitivity.</tt><tt class="descname">ln_hessian</tt><big>(</big><em>self</em>, <em>theta</em>, <em>data</em><big>)</big><a class="reference internal" href="_modules/nems/sensitivity.html#ln_hessian"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.sensitivity.ln_hessian" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">nems.sensitivity.</tt><tt class="descname">ln_hessian</tt><big>(</big><em>self</em>, <em>theta</em>, <em>data</em><big>)</big><a class="headerlink" href="#nems.sensitivity.ln_hessian" title="Permalink to this definition">¶</a></dt>
 <dd><p>hessian of the LNLN model</p>
 </dd></dl>
 
 <dl class="function">
 <dt id="nems.sensitivity.lnln_hessian">
-<tt class="descclassname">nems.sensitivity.</tt><tt class="descname">lnln_hessian</tt><big>(</big><em>self</em>, <em>theta</em>, <em>data</em><big>)</big><a class="reference internal" href="_modules/nems/sensitivity.html#lnln_hessian"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.sensitivity.lnln_hessian" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">nems.sensitivity.</tt><tt class="descname">lnln_hessian</tt><big>(</big><em>self</em>, <em>theta</em>, <em>data</em><big>)</big><a class="headerlink" href="#nems.sensitivity.lnln_hessian" title="Permalink to this definition">¶</a></dt>
 <dd><p>hessian of the LNLN model</p>
 </dd></dl>
 
@@ -784,12 +784,12 @@ and derivatives given by vectors PhiGrad.</p>
 </div>
 <dl class="function">
 <dt id="nems.simulate.simulate_LNLN">
-<tt class="descclassname">nems.simulate.</tt><tt class="descname">simulate_LNLN</tt><big>(</big><em>self</em>, <em>dim=100</em>, <em>num_tents=30</em>, <em>num_tent_samples=1000</em>, <em>sigmasq=0.1</em>, <em>dt=1</em>, <em>numBatches=100</em>, <em>numSamplesPerBatch=1000</em><big>)</big><a class="reference internal" href="_modules/nems/simulate.html#simulate_LNLN"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.simulate.simulate_LNLN" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">nems.simulate.</tt><tt class="descname">simulate_LNLN</tt><big>(</big><em>self</em>, <em>dim=100</em>, <em>num_tents=30</em>, <em>num_tent_samples=1000</em>, <em>sigmasq=0.1</em>, <em>dt=1</em>, <em>numBatches=100</em>, <em>numSamplesPerBatch=1000</em><big>)</big><a class="headerlink" href="#nems.simulate.simulate_LNLN" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="function">
 <dt id="nems.simulate.simulateexpt">
-<tt class="descclassname">nems.simulate.</tt><tt class="descname">simulateexpt</tt><big>(</big><em>self</em>, <em>numBatches=100</em>, <em>numSamplesPerBatch=1000</em><big>)</big><a class="reference internal" href="_modules/nems/simulate.html#simulateexpt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.simulate.simulateexpt" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">nems.simulate.</tt><tt class="descname">simulateexpt</tt><big>(</big><em>self</em>, <em>numBatches=100</em>, <em>numSamplesPerBatch=1000</em><big>)</big><a class="headerlink" href="#nems.simulate.simulateexpt" title="Permalink to this definition">¶</a></dt>
 <dd><p>Simulates data from the model</p>
 </dd></dl>
 
@@ -817,7 +817,7 @@ regardless of if python or the machine happens to crash.</p>
 </ul>
 <dl class="class">
 <dt id="nems.datastore.Datastore">
-<em class="property">class </em><tt class="descclassname">nems.datastore.</tt><tt class="descname">Datastore</tt><big>(</big><em>name</em>, <em>desc</em>, <em>headers</em>, <em>host='localhost'</em>, <em>port=27017</em>, <em>dbname='expts'</em><big>)</big><a class="reference internal" href="_modules/nems/datastore.html#Datastore"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.datastore.Datastore" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">nems.datastore.</tt><tt class="descname">Datastore</tt><big>(</big><em>name</em>, <em>desc</em>, <em>headers</em>, <em>host='localhost'</em>, <em>port=27017</em>, <em>dbname='expts'</em><big>)</big><a class="headerlink" href="#nems.datastore.Datastore" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="http://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></a></p>
 <p>Store parameters and objective values in a mongodb during optimization</p>
 <p class="rubric">Methods</p>
@@ -834,7 +834,7 @@ regardless of if python or the machine happens to crash.</p>
 </table>
 <dl class="method">
 <dt id="nems.datastore.Datastore.insert">
-<tt class="descname">insert</tt><big>(</big><em>idx</em>, <em>data</em>, <em>spread=None</em><big>)</big><a class="reference internal" href="_modules/nems/datastore.html#Datastore.insert"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#nems.datastore.Datastore.insert" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">insert</tt><big>(</big><em>idx</em>, <em>data</em>, <em>spread=None</em><big>)</big><a class="headerlink" href="#nems.datastore.Datastore.insert" title="Permalink to this definition">¶</a></dt>
 <dd><p>Insert results for this experiment</p>
 </dd></dl>
 
@@ -880,7 +880,7 @@ regardless of if python or the machine happens to crash.</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.1',
+            VERSION:'0.2.1',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

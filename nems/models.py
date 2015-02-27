@@ -65,8 +65,7 @@ class NeuralEncodingModel(object):
         # split data into minibatches
         if minibatch_size is None:
 
-            # choose number of minibatches as sqrt(T)/10
-            # minibatch_size = np.ceil(0.1 * np.sqrt(self.num_samples)).astype('int')
+            # choose number of minibatches
             minibatch_size = np.ceil(10 * np.sqrt(self.num_samples)).astype('int')
             num_minibatches = int(self.num_samples / minibatch_size)
 

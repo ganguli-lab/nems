@@ -7,8 +7,7 @@ Sketched out the ``NeuralEncodingModel`` class and added a subclass, the ``LNLN`
 
 API Overview
 ------------
-- Functionality split between the ``NeuralEncodingModel`` class and its subclasses. I'm trying to keep things general
-to all encoding models in the ``NeuralEncodingModel`` class.
+- Functionality split between the ``NeuralEncodingModel`` class and its subclasses. I'm trying to keep things general to all encoding models in the ``NeuralEncodingModel`` class.
 - Build a subclass, the ``LNLN`` model class, that lets you fit two layer linear-nonlinear cascade models to data
 - Functions for dealing with tent basis functions (useful for fitting generic nonlinearities) are included in ``tentbasis.py``
 

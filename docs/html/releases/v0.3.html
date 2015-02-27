@@ -7,7 +7,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>v0.1 (February 22, 2015) &mdash; nems 0.2.1 documentation</title>
+  <title>v0.3 (Work in progress) &mdash; nems 0.2.1 documentation</title>
   
 
   
@@ -105,10 +105,10 @@
   <ul class="wy-breadcrumbs">
     <li><a href="../index.html">Docs</a> &raquo;</li>
       
-    <li>v0.1 (February 22, 2015)</li>
+    <li>v0.3 (Work in progress)</li>
       <li class="wy-breadcrumbs-aside">
         
-          <a href="../_sources/releases/v0.1.txt" rel="nofollow"> View page source</a>
+          <a href="../_sources/releases/v0.3.txt" rel="nofollow"> View page source</a>
         
       </li>
   </ul>
@@ -116,25 +116,20 @@
 </div>
           <div role="main">
             
-  <div class="section" id="v0-1-february-22-2015">
-<h1>v0.1 (February 22, 2015)<a class="headerlink" href="#v0-1-february-22-2015" title="Permalink to this headline">¶</a></h1>
-<p>Initial release!</p>
-<p>Sketched out the <tt class="docutils literal"><span class="pre">NeuralEncodingModel</span></tt> class and added a subclass, the <tt class="docutils literal"><span class="pre">LNLN</span></tt> class.</p>
-<div class="section" id="api-overview">
-<h2>API Overview<a class="headerlink" href="#api-overview" title="Permalink to this headline">¶</a></h2>
+  <div class="section" id="v0-3-work-in-progress">
+<h1>v0.3 (Work in progress)<a class="headerlink" href="#v0-3-work-in-progress" title="Permalink to this headline">¶</a></h1>
+<p>Current focus: adding a separate <tt class="docutils literal"><span class="pre">objectives</span></tt> that lets you plug and play different kinds of noise models,
+such as gaussian (mean squared error) or poisson.</p>
+<div class="section" id="new-features">
+<h2>New Features<a class="headerlink" href="#new-features" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
-<li>Functionality split between the <tt class="docutils literal"><span class="pre">NeuralEncodingModel</span></tt> class and its subclasses. I&#8217;m trying to keep things general to all encoding models in the <tt class="docutils literal"><span class="pre">NeuralEncodingModel</span></tt> class.</li>
-<li>Build a subclass, the <tt class="docutils literal"><span class="pre">LNLN</span></tt> model class, that lets you fit two layer linear-nonlinear cascade models to data</li>
-<li>Functions for dealing with tent basis functions (useful for fitting generic nonlinearities) are included in <tt class="docutils literal"><span class="pre">tentbasis.py</span></tt></li>
+<li>Information about algorithm convergence is stored in two data frames, <tt class="docutils literal"><span class="pre">models.metadata</span></tt> and <tt class="docutils literal"><span class="pre">models.convergence</span></tt>. The first stores the primal and dual residuals and runtimes for each leg of the alternating minimization, and the second stores metrics evaluated on held out data at each alternating iteration.</li>
 </ul>
 </div>
-<div class="section" id="roadmap">
-<h2>Roadmap<a class="headerlink" href="#roadmap" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="api-changes">
+<h2>API Changes<a class="headerlink" href="#api-changes" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
-<li>Add more model classes (e.g. an <tt class="docutils literal"><span class="pre">LN</span></tt> subclass)</li>
-<li>Better tools for monitoring optimization progress, perhaps storing results in a database? (in <tt class="docutils literal"><span class="pre">datastore.py</span></tt>)</li>
-<li>Add tools to simulate data in <tt class="docutils literal"><span class="pre">simulate.py</span></tt></li>
-<li>Better testing and documentation</li>
+<li>Moved helper functions to a separate module, contained in <tt class="docutils literal"><span class="pre">utilities.py</span></tt></li>
 </ul>
 </div>
 </div>

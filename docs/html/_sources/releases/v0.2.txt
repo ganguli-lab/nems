@@ -1,8 +1,7 @@
 v0.2 (February 25, 2015)
 ========================
 
-Work in progress. Current focus: adding a separate ``objectives`` that lets you plug and play different kinds of noise models,
-such as gaussian (mean squared error) or poisson. Also: ability to use different final nonlinearities (instead of just the exponential).
+Main updates: added the ability to use different final nonlinearities (instead of just the exponential), and pretty printing of optimization results using the ``tableprint`` module
 
 New Features
 ------------
@@ -15,9 +14,5 @@ New Features
 API Changes
 -----------
 - Added the ability to specify custom final nonlinearities in ``LNLN``, using the ``nonlinearities`` module
-- Changed how the ``LNLN.rate()`` function works, it now returns the derivative of the final nonlinearity (instead of the log firing rate).
-This is used internally in ``LNLN.fit()`` to compute the objective and gradient using different final nonlinearities
-- The ``test()`` function now expects the parameters to get passed in, instead of using ``self.theta``. The ``metrics``
-function in each subclass of ``NeuralEncodingModel`` should accept a dictionary of parameters in addition to the index
-of the minibatch to test. This was necessary to be able to test the model on held out data during optimization (before
-the final parameters were saved in ``self.theta``)
+- Changed how the ``LNLN.rate()`` function works, it now returns the derivative of the final nonlinearity (instead of the log firing rate). This is used internally in ``LNLN.fit()`` to compute the objective and gradient using different final nonlinearities
+- The ``test()`` function now expects the parameters to get passed in, instead of using ``self.theta``. The ``metrics`` function in each subclass of ``NeuralEncodingModel`` should accept a dictionary of parameters in addition to the index of the minibatch to test. This was necessary to be able to test the model on held out data during optimization (before the final parameters were saved in ``self.theta``)
