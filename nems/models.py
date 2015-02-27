@@ -114,6 +114,10 @@ class NeuralEncodingModel(object):
         # compute the mean firing rate
         self.meanrate = np.mean([np.mean(d['rate']) for d in self.data])
 
+        # store metadata and convergence information in pandas DataFrames
+        self.metadata = pd.DataFrame()
+        self.convergence = pd.DataFrame()
+
     def __str__(self):
         return "Neural encoding model, " + self.modeltype
 
@@ -256,6 +260,7 @@ class NeuralEncodingModel(object):
         # print the table
         tableprint.table(data, headers, {'column_width': 30, 'precision': '8g'})
 
+        return df
 
 class LN(NeuralEncodingModel):
     def __init__(self, stim, rate, filter_dims, minibatch_size=None, frac_train=0.8, num_tents=30, sigmasq=0.2,
@@ -722,6 +727,10 @@ class LNLN(NeuralEncodingModel):
 
         """
 
+        # reset the metadata and convergence data structures
+        self.metadata = pd.DataFrame()
+        self.convergence = pd.DataFrame()
+
         # grab the initial parameters
         theta_current = {'W': self.theta_init['W'].copy(), 'f': self.theta_init['f'].copy()}
 
@@ -729,7 +738,7 @@ class LNLN(NeuralEncodingModel):
         train_data = [self.data[idx] for idx in self.train_indices]
 
         # runs the optimization procedure for one set of parameters (a single leg of the alternating minimization)
-        def optimize_param(f_df_wrapper, param_key, check_grad):
+        def optimize_param(f_df_wrapper, param_key, check_grad, cur_iter):
 
             # initialize the SFO instance
             loglikelihood_optimizer = SFO(f_df_wrapper, theta_current[param_key], train_data, display=0)
@@ -745,7 +754,14 @@ class LNLN(NeuralEncodingModel):
             [opt.add_regularizer(reg) for reg in self.regularizers[param_key]]
 
             # run the optimization procedure
-            return opt.minimize(theta_current[param_key], max_iter=max_iter, disp=disp)
+            opt.minimize(theta_current[param_key], max_iter=max_iter, disp=disp)
+
+            # add metadata to converge dataframe
+            opt.metadata['Iteration'] = cur_iter
+            self.metadata = self.metadata.append(opt.metadata)
+
+            # return parameters and optimization metadata
+            return opt.theta
 
         # print results based on the initial parameters
         print('\n')
@@ -764,10 +780,13 @@ class LNLN(NeuralEncodingModel):
                 return self.f_df(theta_current['W'], f, d, param_gradient='f')
 
             # run the optimization procedure for this parameter
-            theta_current['f'] = optimize_param(f_df_wrapper, 'f', check_grad).copy()
+            theta_current['f'] = optimize_param(f_df_wrapper, 'f', check_grad, alt_iter + 0.5).copy()
 
             # run the callback
-            self.print_test_results(theta_current)
+            df = self.print_test_results(theta_current)
+            avg = df.groupby('set').mean()
+            avg['Iteration'] = alt_iter + 0.5
+            self.convergence = self.convergence.append(avg)
 
             # Fit filters
             print('\n')
@@ -778,14 +797,17 @@ class LNLN(NeuralEncodingModel):
                 return self.f_df(W, theta_current['f'], d, param_gradient='W')
 
             # run the optimization procedure for this parameter
-            Wk = optimize_param(f_df_wrapper, 'W', check_grad).copy()
+            Wk = optimize_param(f_df_wrapper, 'W', check_grad, alt_iter + 1).copy()
 
             # normalize filters
             for filter_index in range(Wk.shape[0]):
                 theta_current['W'][filter_index] = utilities.nrm(Wk[filter_index])
 
-            # run the callback
-            self.print_test_results(theta_current)
+            # print and save test results
+            df = self.print_test_results(theta_current)
+            avg = df.groupby('set').mean()
+            avg['Iteration'] = alt_iter + 1
+            self.convergence = self.convergence.append(avg)
 
         # store learned parameters
         self.theta = copy.deepcopy(theta_current)

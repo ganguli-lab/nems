@@ -1,0 +1,12 @@
+v0.3 (Work in progress)
+=======================
+
+Current focus: adding a separate ``objectives`` that lets you plug and play different kinds of noise models,
+such as gaussian (mean squared error) or poisson.
+
+New Features
+------------
+
+API Changes
+-----------
+- Moved helper functions to a separate module, contained in ``utilities.py``

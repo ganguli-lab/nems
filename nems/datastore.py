@@ -26,7 +26,8 @@ class Datastore(object):
     """
 
     def __init__(self, name, desc, headers, host='localhost', port=27017, dbname='expts'):
-        """initialize modelfitting datastore object
+        """
+        initialize modelfitting datastore object
 
         Arguments
         ---------
@@ -65,7 +66,8 @@ class Datastore(object):
 
 
     def insert(self, idx, data, spread=None):
-        """Insert results for this experiment
+        """
+        Insert results for this experiment
 
         Arguments
         ---------

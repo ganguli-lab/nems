@@ -9,8 +9,5 @@ Roadmap (looking ahead to v1.0)
 - Build some simple LN and LNLN simulations in ``simulate.py``
 - Write some tests where we recover simulated model parameters
 
-Releases
-========
-
 .. include:: releases/v0.2.rst
 .. include:: releases/v0.1.rst
