@@ -46,7 +46,7 @@ def build_tents(num_tent_samples, tent_span, num_tents, tent_type='gaussian', si
     tentparams = dict()
     tentparams['num_tent_samples'] = num_tent_samples
     tentparams['tent_span'] = tent_span
-    tentparams['num_tents'] = num_tents
+    tentparams['num_tents'] = num_tents + 1
     tentparams['type'] = tent_type
     tentparams['sigmasq'] = sigmasq
 
@@ -56,10 +56,13 @@ def build_tents(num_tent_samples, tent_span, num_tents, tent_type='gaussian', si
     # build tent basis functions
     if str.lower(tent_type) == 'gaussian':
         tentparams['Phi'], tentparams['centers'] = _make_gaussian_basis(tentparams['tent_x'], num_tents, sigmasq=sigmasq)
+
     elif str.lower(tent_type) == 'linear':
         tentparams['Phi'], tentparams['centers'] = _make_linear_basis(tentparams['tent_x'], num_tents)
+
     elif str.lower(tent_type) == 'ispline':
         tentparams['Phi'], tentparams['centers'] = _make_ispline_basis(tentparams['tent_x'], num_tents)
+
     else:
         raise ValueError('Could not parse tent type ' + tent_type)
 
@@ -80,14 +83,23 @@ def eval_tents(u, tentparams):
     z, zgrad    --
 
     """
+
+    # evaluate the tent basis functions
     if str.lower(tentparams['type']) == 'gaussian':
         z, zgrad = _eval_gaussian_basis(u, tentparams['centers'], tentparams['sigmasq'])
+
     elif str.lower(tentparams['type']) == 'linear':
         z, zgrad = _eval_linear_basis(u, tentparams['centers'])
+
     elif str.lower(tentparams['type']) == 'ispline':
         z, zgrad = _eval_ispline_basis(u, tentparams['centers'], tentparams['num_tents'])
+
     else:
         raise ValueError('Could not parse tent type ' + tentparams['type'])
+
+    # add bias term
+    z = np.concatenate((z, np.ones(z.shape[:-1] + (1,))), axis=-1)
+    zgrad = np.concatenate((zgrad, np.zeros(z.shape[:-1] + (1,))), axis=-1)
 
     return z, zgrad
 

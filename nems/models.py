@@ -630,7 +630,7 @@ class LNLN(NeuralEncodingModel):
             for idx in range(self.num_subunits):
                 ts = self.tentparams['tent_span']
                 nonlin_init = np.linspace(ts[0], ts[1], self.tentparams['num_tent_samples'])
-                self.theta_init['f'][idx,:] = np.linalg.lstsq(self.tentparams['Phi'], nonlin_init)[0]
+                self.theta_init['f'][idx,:] = np.append(np.linalg.lstsq(self.tentparams['Phi'], nonlin_init)[0], 0)
 
         # initialize regularizers
         self.regularizers = {'W': list(), 'f': list()}

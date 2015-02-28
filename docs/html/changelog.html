@@ -134,6 +134,7 @@ such as gaussian (mean squared error) or poisson.</p>
 <div class="section" id="new-features">
 <h3>New Features<a class="headerlink" href="#new-features" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
+<li>Added a bias term in <tt class="docutils literal"><span class="pre">tentbasis.py</span></tt>, now there is an additional offset that is part of each tentbasis nonlinearity</li>
 <li>Information about algorithm convergence is stored in two data frames, <tt class="docutils literal"><span class="pre">models.metadata</span></tt> and <tt class="docutils literal"><span class="pre">models.convergence</span></tt>. The first stores the primal and dual residuals and runtimes for each leg of the alternating minimization, and the second stores metrics evaluated on held out data at each alternating iteration.</li>
 </ul>
 </div>
