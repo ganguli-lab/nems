@@ -110,8 +110,10 @@ class NeuralEncodingModel(object):
         # compute the STA
         self._getsta()
 
-        # compute the mean firing rate
-        self.meanrate = np.mean([np.mean(d['rate']) for d in self.data])
+        # compute firing rate statistics
+        rate_concat = np.hstack([d['rate'] for d in self.data])
+        self.meanrate = np.mean(rate_concat)
+        self.rate_variance = np.var(rate_concat)
 
         # store metadata and convergence information in pandas DataFrames
         self.metadata = pd.DataFrame()
@@ -854,7 +856,11 @@ class LNLN(NeuralEncodingModel):
         # mean squared error
         mse = float(np.mean((rhat - data['rate']) ** 2))
 
-        return {'corrcoef': cc, 'log-likelihood (rel.)': fobj, 'mean squared error': mse}
+        # fraction of explained variacne
+        fev = 1.0 - (mse / self.rate_variance)
+
+        return {'corrcoef': cc, 'log-likelihood (rel.)': fobj,
+                'mean squared error': mse, 'fraction of explained variance': fev}
 
     def _stim_gradient(self, stim):
         """
