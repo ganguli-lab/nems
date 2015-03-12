@@ -28,7 +28,7 @@ import numpy as np
 import tentbasis
 import nonlinearities
 import utilities
-from .sfo_admm import SFO
+from sfo_admm import SFO
 from proxalgs.core import Optimizer
 from proxalgs import operators
 import pandas as pd
