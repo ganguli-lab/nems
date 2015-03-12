@@ -25,9 +25,9 @@ import time
 import copy
 from functools import partial
 import numpy as np
-from . import tentbasis
-from . import nonlinearities
-from . import utilities
+import tentbasis
+import nonlinearities
+import utilities
 from .sfo_admm import SFO
 from proxalgs.core import Optimizer
 from proxalgs import operators
@@ -35,7 +35,7 @@ import pandas as pd
 import tableprint
 
 # exports
-__all__ = ['NeuralEncodingModel', 'LNLN', 'LN']
+__all__ = ['NeuralEncodingModel', 'LNLN']
 
 
 class NeuralEncodingModel(object):
