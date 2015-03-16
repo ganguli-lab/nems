@@ -63,6 +63,12 @@ class NeuralEncodingModel(object):
         # filter dimensions must be (n1 x n2 x tau), while the stimulus dimensions should be (n1*n2 x t)
         assert stimulus.shape[0] == self.stim_dim, 'Stimulus size does not match up with filter dimensions'
 
+        # length of the given firing rate must match the length of the stimulus
+        assert stimulus.shape[-1] == rate.size, 'Stimulus length (in time) must equal the length of the given rate'
+
+        # trim the initial portion of the rate (the time shorter than the filter length)
+        rate_trim = rate[self.tau:]
+
         # split data into minibatches
         if minibatch_size is None:
 
@@ -87,14 +93,14 @@ class NeuralEncodingModel(object):
             if spikes is not None:
                 self.data.append({
                     'stim': slices[:, minibatch_indices, :],
-                    'rate': rate[minibatch_indices],
+                    'rate': rate_trim[minibatch_indices],
                     'spikes': np.where(spikes[minibatch_indices] > 0)[0]
                 })
 
             else:
                 self.data.append({
                     'stim': slices[:, minibatch_indices, :],
-                    'rate': rate[minibatch_indices]
+                    'rate': rate_trim[minibatch_indices]
                 })
 
         # set and store random seed (for reproducibility)
