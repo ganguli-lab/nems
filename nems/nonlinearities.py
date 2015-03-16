@@ -29,10 +29,11 @@ def exp(x):
     # compute the exponential
     y = np.exp(x)
 
-    # compute the derivative
+    # compute the first and second derivatives
     dydx = y
+    dy2dx2 = y
 
-    return y, dydx
+    return y, dydx, dy2dx2
 
 def softrect(x):
     """
@@ -63,7 +64,10 @@ def softrect(x):
     # compute the derivative
     dydx = x_exp / (1 + x_exp)
 
-    return y, dydx
+    # compute the second derivative
+    dy2dx2 = x_exp / (1 + x_exp)**2
+
+    return y, dydx, dy2dx2
 
 def linear(x):
     """
@@ -87,7 +91,8 @@ def linear(x):
     # linear function leaves variable unchanged
     y = x
 
-    # compute the derivative (constant)
+    # compute the derivative (constant) and second derivative (zero)
     dydx = np.ones(x.shape)
+    dy2dx2 = np.zeros(x.shape)
 
-    return y, dydx
+    return y, dydx, dy2dx2

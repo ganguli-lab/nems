@@ -33,6 +33,7 @@ from proxalgs.core import Optimizer
 from proxalgs import operators
 import pandas as pd
 import tableprint
+from progressbar import ProgressBar
 
 # exports
 __all__ = ['NeuralEncodingModel', 'LNLN']
@@ -437,7 +438,7 @@ class LNLN(NeuralEncodingModel):
         m = (data['rate'].size - tau + 1)
 
         # estimate firing rate and get model response
-        u, z, zgrad, drdz, r = self.rate({'W': W, 'f': f}, data['stim'])
+        u, z, zgrad, zhess, drdz, dr2dz2, r = self.rate({'W': W, 'f': f}, data['stim'])
 
         # objective in bits (poisson log-likelihood)
         obj_value = np.mean(r - data['rate'] * np.log(r))
@@ -621,27 +622,87 @@ class LNLN(NeuralEncodingModel):
         return {'corrcoef': cc, 'log-likelihood (rel.)': fobj,
                 'mean squared error': mse, 'fraction of explained variance': fev}
 
-    def _stim_gradient(self, stim):
+    def hessian(self, theta):
         """
-        Compute the model response and gradient with respect to the stimulus
-
-        .. warning:: Work in progress
+        average the Hessian over all minibatches of data
 
         """
 
-        u, z, zgrad, drdz, r = self.rate(self.theta, stim)
+        L = len(self.data)
+        pb = ProgressBar(L)
+        H = self._hessian_minibatch(theta,0)
+        pb.animate(1)
 
-        xgrad = np.zeros_like(np.squeeze(stim))
-        for idx in range(self.theta['W'].shape[0]):
+        # return reduce(sum, map(lambda idx: self._hessian_minibatch(theta, idx), range(len(self.data)))) / float(len(self.data))
+        for idx in range(1,L):
+            H += self._hessian_minibatch(theta, idx)
+            pb.animate(idx+1)
 
-            xgrad += self.theta['W'][idx] * zgrad[idx, 0, :].dot(self.theta['f'][idx, :])
+        return H / float(L)
 
-        # fgrad = np.tensordot(zgrad, self.theta['f'], ([0,2],[0,1]))
-        # wgrad = np.tensordot(u, self.theta['W'],([0],[0]))
+    def _hessian_minibatch(self, theta, data_index):
+        """
+        computes the Hessian of the objective at the given parameter value
 
-        return r, xgrad * r
+        """
 
-    def rate(self, theta, stim):
+        # data
+        r = self.data[data_index]['rate']
+
+        # model
+        u, z, zgrad, zhess, drdz, dr2dz2, rhat = self.rate(theta, self.data[data_index]['stim'], hess=True)
+
+        # store the full Hessian
+        N = np.prod(theta['W'].shape[1:])
+        M = theta['W'].shape[0]
+        P = theta['f'].shape[1]
+        T = r.size
+        H = np.zeros((N*M + P*M, N*M + P*M))
+
+        # gradient and Hessian factors
+        grad_factor = 1 - r/rhat
+        hess_factor = r / (rhat**2)
+
+        # nonlinearity projection
+        zproj = np.sum(theta['f'][:, np.newaxis, :] * zgrad, axis=2) # M by T
+        zproj2 = np.sum(theta['f'][:, np.newaxis, :] * zhess, axis=2) # M by T
+
+        # vectorized data
+        x_vec = np.rollaxis(self.data[data_index]['stim'],-1).reshape(N,T) # N x T
+        z_vec = np.rollaxis(z, -1).reshape(M*P, T) # M*P x T
+        scale_factor = np.diag(grad_factor * dr2dz2 + hess_factor * drdz**2) # diagonal(T)
+
+        # nonlinearity - nonlinearity portion
+        H[-(M*P):, -(M*P):] = z_vec.dot(scale_factor.dot(z_vec.T))
+
+        # loop over subunits
+        for j1 in range(M):
+
+            zgrad_j1 = zproj[j1,:]
+            zhess_j1 = zproj2[j1,:]
+
+            # scale factor grad
+            sf_zgrad = scale_factor * np.diag(zgrad_j1)
+
+            # subunit-nonlinearity block
+            H[j1*N:(j1+1)*N, -(M*P):] = x_vec.dot(sf_zgrad.dot(z_vec.T))
+            H[-(M*P):, j1*N:(j1+1)*N] = H[j1*N:(j1+1)*N, -(M*P):].T
+
+            # subunit-subunit block
+            for j2 in range(M):
+
+                zgrad_j2 = np.diag(zproj[j2,:])
+
+                # update this portion of the Hessian
+                H[j1*N:(j1+1)*N, j2*N:(j2+1)*N] = x_vec.dot((sf_zgrad * zgrad_j2).dot(x_vec.T))
+
+                # diagonal term (for the same subunit)
+                if j1 == j2:
+                    H[j1*N:(j1+1)*N, j2*N:(j2+1)*N] += x_vec.dot(np.diag(grad_factor * drdz * zhess_j1).dot(x_vec.T))
+
+        return H / float(T)
+
+    def rate(self, theta, stim, hess=False):
         """
         Compute the model response given parameters
 
@@ -655,6 +716,7 @@ class LNLN(NeuralEncodingModel):
         u : array_like
         z : array_like
         zgrad : array_like
+        zhess : array_like
         drdz : array_like
         r : array_like
 
@@ -664,9 +726,9 @@ class LNLN(NeuralEncodingModel):
         u = np.tensordot(theta['W'], stim, ([1, 2], [0, 2]))  # dims: (K x M)
 
         # evaluate input at tent basis functions
-        z, zgrad = tentbasis.eval_tents(u, self.tentparams)
+        z, zgrad, zhess = tentbasis.eval_tents(u, self.tentparams, hess=hess)
 
         # compute log(rate) and the firing rate
-        r, drdz = self.final_nonlin_function(np.tensordot(theta['f'], z, ([0, 1], [0, 2])))  # dims: (M)
+        r, drdz, dr2dz2 = self.final_nonlin_function(np.tensordot(theta['f'], z, ([0, 1], [0, 2])))  # dims: (M)
 
-        return u, z, zgrad, drdz, r
+        return u, z, zgrad, zhess, drdz, dr2dz2, r

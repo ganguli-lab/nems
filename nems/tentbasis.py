@@ -69,7 +69,7 @@ def build_tents(num_tent_samples, tent_span, num_tents, tent_type='gaussian', si
     # return tent function parameters
     return tentparams
 
-def eval_tents(u, tentparams):
+def eval_tents(u, tentparams, hess=False):
     """
     Evaluate basis functions and derivative at given input value
 
@@ -86,7 +86,12 @@ def eval_tents(u, tentparams):
 
     # evaluate the tent basis functions
     if str.lower(tentparams['type']) == 'gaussian':
-        z, zgrad = _eval_gaussian_basis(u, tentparams['centers'], tentparams['sigmasq'])
+
+        if hess:
+            z, zgrad, zhess = _eval_gaussian_basis(u, tentparams['centers'], tentparams['sigmasq'], hess=True)
+
+        else:
+            z, zgrad = _eval_gaussian_basis(u, tentparams['centers'], tentparams['sigmasq'])
 
     elif str.lower(tentparams['type']) == 'linear':
         z, zgrad = _eval_linear_basis(u, tentparams['centers'])
@@ -101,7 +106,12 @@ def eval_tents(u, tentparams):
     z = np.concatenate((z, np.ones(z.shape[:-1] + (1,))), axis=-1)
     zgrad = np.concatenate((zgrad, np.zeros(z.shape[:-1] + (1,))), axis=-1)
 
-    return z, zgrad
+    if hess:
+        zhess = np.concatenate((zhess, np.zeros(zhess.shape[:-1] + (1,))), axis=-1)
+        return z, zgrad, zhess
+
+    else:
+        return z, zgrad, None
 
 def _make_ispline_basis(x, numBases, order=3, limits=None):
     """
@@ -262,7 +272,7 @@ def _make_gaussian_basis(x, numBases, sigmasq=0.2, limits=None):
 
     return Phi, centers
 
-def _eval_gaussian_basis(x, centers, sigmasq):
+def _eval_gaussian_basis(x, centers, sigmasq, hess=False):
     """
     Evaluates gaussian basis functions and derivatives at given values
 
@@ -281,18 +291,23 @@ def _eval_gaussian_basis(x, centers, sigmasq):
 
     Phi = np.zeros((x.size, centers.size))
     PhiGrad = np.zeros(Phi.shape)
-    # PhiGrad2 = np.zeros(Phi.shape)        # uncomment the PhiGrad2 lines if you need the second derivative
+    if hess:
+        PhiGrad2 = np.zeros(Phi.shape)        # uncomment the PhiGrad2 lines if you need the second derivative
 
     for j in range(centers.size):
         z = np.exp( -0.5 * (x.ravel() - centers[j])**2 / sigmasq )
         zgrad = - (x.ravel() - centers[j]) / sigmasq
-        # zhess = PhiGrad[:,j] * zgrad + z * (- 1 / sigmasq)
 
         Phi[:,j] = z
         PhiGrad[:,j] = z * zgrad
-        # PhiGrad2[:,j] = zhess
+        if hess:
+            PhiGrad2[:,j] = PhiGrad[:,j] * zgrad - z / sigmasq
 
-    return Phi.reshape(x.shape + (-1,)), PhiGrad.reshape(x.shape + (-1,)) #, PhiGrad2
+    if hess:
+        return Phi.reshape(x.shape + (-1,)), PhiGrad.reshape(x.shape + (-1,)), PhiGrad2.reshape(x.shape + (-1,))
+
+    else:
+        return Phi.reshape(x.shape + (-1,)), PhiGrad.reshape(x.shape + (-1,))
 
 def eval_basis(u, x, Phi, PhiGrad):
     """
