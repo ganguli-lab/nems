@@ -12,7 +12,6 @@ Classes
 -------
 - `NeuralEncodingModel` -- A super class which contains methods that are common to all encoding models
 - `LNLN` -- A subclass of `NeuralEncodingModel` that fits two layer models consisting of alternating layers of linear filtering and nonlinear thresholding operations. The parameters for the filter and nonlinearities of the first layer are learned, while the linear filter and nonlinearity of the second layer are fixed.
-- `LN` -- A subclass of `NeuralEncodingModel` that fits linear-nonlinear (LN) models using a Gaussian log-likelihood.
 
 References
 ----------
@@ -466,7 +465,7 @@ class LNLN(NeuralEncodingModel):
 
         return obj_value, obj_gradient
 
-    def fit(self, num_alt=2, max_iter=20, num_likelihood_steps=50, disp=2, check_grad=None):
+    def fit(self, num_alt=2, max_iter=20, num_likelihood_steps=50, disp=2, check_grad=None, callback=None):
         """
         Runs an optimization algorithm to learn the parameters of the model given training data and regularizers
 
@@ -487,6 +486,9 @@ class LNLN(NeuralEncodingModel):
         check_grad : string, optional
             If 'f' or 'W', then the gradient of the log-likelihood objective with respect to that parameter is checked
             against a numerical estimate.
+
+        callback : function
+            A callback function that gets called each iteration with the current parameters and a dictionary of other information
 
         Notes
         -----
