@@ -523,7 +523,7 @@ class LNLN(NeuralEncodingModel):
             [opt.add_regularizer(reg) for reg in self.regularizers[param_key]]
 
             # run the optimization procedure
-            opt.minimize(theta_current[param_key], max_iter=max_iter, disp=disp)
+            opt.minimize(theta_current[param_key], max_iter=max_iter, disp=disp, callback=callback)
 
             # add metadata to converge dataframe
             opt.metadata['Iteration'] = cur_iter
