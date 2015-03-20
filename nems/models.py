@@ -119,7 +119,6 @@ class NeuralEncodingModel(object):
         # compute firing rate statistics
         rate_concat = np.hstack([d['rate'] for d in self.data])
         self.meanrate = np.mean(rate_concat)
-        self.rate_variance = np.var(rate_concat)
 
         # store metadata and convergence information in pandas DataFrames
         self.metadata = pd.DataFrame()
@@ -623,9 +622,10 @@ class LNLN(NeuralEncodingModel):
 
         # mean squared error
         mse = float(np.mean((rhat - data['rate']) ** 2))
+        rate_var = float(np.mean((np.mean(data['rate']) - data['rate']) ** 2))
 
         # fraction of explained variacne
-        fev = 1.0 - (mse / self.rate_variance)
+        fev = 1.0 - (mse / rate_var)
 
         return {'corrcoef': cc, 'log-likelihood (rel.)': fobj,
                 'mean squared error': mse, 'fraction of explained variance': fev}
