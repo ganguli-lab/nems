@@ -20,7 +20,6 @@ Coming soon
 """
 
 # imports
-import time
 import copy
 from functools import partial
 import numpy as np
@@ -264,7 +263,7 @@ class NeuralEncodingModel(object):
             data[1] += [test_res[key], test_spread[key] / np.sqrt(ntest)]
 
         # print the table
-        tableprint.table(data, headers, {'column_width': 30, 'precision': '8g'})
+        tableprint.table(data, headers, {'column_width': 10, 'precision': '3g'})
 
         return df
 
@@ -349,7 +348,7 @@ class LNLN(NeuralEncodingModel):
 
         # initialize tent basis functions
         num_tent_samples = 1000
-        tent_span = (-5,5)          # suitable for z-scored input
+        tent_span = (-5, 5)          # suitable for z-scored input
         self.tentparams = tentbasis.build_tents(num_tent_samples, tent_span, num_tents,
                                                 tent_type=tent_type, sigmasq=sigmasq)
 
@@ -627,8 +626,7 @@ class LNLN(NeuralEncodingModel):
         # fraction of explained variacne
         fev = 1.0 - (mse / rate_var)
 
-        return {'corrcoef': cc, 'log-likelihood (rel.)': fobj,
-                'mean squared error': mse, 'fraction of explained variance': fev}
+        return {'CC': cc, 'LLI': fobj, 'MSE': mse, 'FEV': fev}
 
     def hessian(self, theta):
         """
