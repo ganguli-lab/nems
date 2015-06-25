@@ -102,7 +102,8 @@ class NeuralEncodingModel(object):
                 })
 
         # set and store random seed (for reproducibility)
-        self.random_seed = np.random.randint(1e5)
+        self.random_seed = 12345
+        print("Setting random seed to: %i" % self.random_seed)
         np.random.seed(self.random_seed)
 
         # split up data into train/validation/test sets
@@ -249,7 +250,7 @@ class NeuralEncodingModel(object):
         test_spread = dict(df.loc[df['set'] == 'test'].std())
 
         # build column headers (names of metrics) and data matrix
-        headers = ['Train/Test Set']
+        headers = ['Set']
         data = [['train'], ['test']]
 
         for key in test_res.keys():
