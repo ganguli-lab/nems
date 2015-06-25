@@ -97,7 +97,7 @@ def eval_tents(u, tentparams, hess=False):
         z, zgrad = _eval_linear_basis(u, tentparams['centers'])
 
     elif str.lower(tentparams['type']) == 'ispline':
-        z, zgrad = _eval_ispline_basis(u, tentparams['centers'], tentparams['num_tents'])
+        z, zgrad = _eval_ispline_basis(u, tentparams['centers'], tentparams['num_tents']-1)
 
     else:
         raise ValueError('Could not parse tent type ' + tentparams['type'])

@@ -43,14 +43,14 @@ class NeuralEncodingModel(object):
 
     """
 
-    def __init__(self, modeltype, stimulus, rate, filter_dims, minibatch_size, frac_train=0.8, spikes=None):
+    def __init__(self, modeltype, stimulus, spkcounts, filter_dims, minibatch_size, frac_train=0.8):
 
         # model name / subclass
         self.modeltype = str.lower(modeltype)
 
         # model properties
         self.theta = None
-        self.num_samples = rate.size
+        self.num_samples = spkcounts.size
         self.tau = filter_dims[-1]
         self.filter_dims = filter_dims
         self.stim_dim = np.prod(filter_dims[:-1])
@@ -62,10 +62,10 @@ class NeuralEncodingModel(object):
         assert stimulus.shape[0] == self.stim_dim, 'Stimulus size does not match up with filter dimensions'
 
         # length of the given firing rate must match the length of the stimulus
-        assert stimulus.shape[-1] == rate.size, 'Stimulus length (in time) must equal the length of the given rate'
+        assert stimulus.shape[-1] == spkcounts.size, 'Stimulus length (in time) must equal the length of the given rate'
 
         # trim the initial portion of the rate (the time shorter than the filter length)
-        rate_trim = rate[self.tau:]
+        rate_trim = spkcounts[self.tau:]
 
         # split data into minibatches
         if minibatch_size is None:
@@ -88,18 +88,10 @@ class NeuralEncodingModel(object):
             minibatch_indices = slice(idx * minibatch_size, (idx + 1) * minibatch_size)
 
             # z-score the stimulus and save each minibatch, along with the rate and spikes if given
-            if spikes is not None:
-                self.data.append({
-                    'stim': slices[:, minibatch_indices, :],
-                    'rate': rate_trim[minibatch_indices],
-                    'spikes': np.where(spikes[minibatch_indices] > 0)[0]
-                })
-
-            else:
-                self.data.append({
-                    'stim': slices[:, minibatch_indices, :],
-                    'rate': rate_trim[minibatch_indices]
-                })
+            self.data.append({
+                'stim': slices[:, minibatch_indices, :],
+                'rate': rate_trim[minibatch_indices]
+            })
 
         # set and store random seed (for reproducibility)
         self.random_seed = 12345
@@ -270,8 +262,8 @@ class NeuralEncodingModel(object):
 
 
 class LNLN(NeuralEncodingModel):
-    def __init__(self, stim, rate, filter_dims, minibatch_size=None, frac_train=0.8, num_subunits=1,
-                 num_tents=30, sigmasq=0.2, tent_type='gaussian', final_nonlinearity='softrect', spikes=None, **kwargs):
+    def __init__(self, stim, spkcounts, filter_dims, minibatch_size=None, frac_train=0.8, num_subunits=1,
+                 num_tents=30, sigmasq=0.2, tent_type='gaussian', final_nonlinearity='softrect', **kwargs):
         """
         Initializes a two layer cascade linear-nonlinear (LNLN) model
 
@@ -338,8 +330,8 @@ class LNLN(NeuralEncodingModel):
         """
 
         # initialize the model object
-        NeuralEncodingModel.__init__(self, 'lnln_exp', stim, rate, filter_dims, minibatch_size,
-                                     frac_train=frac_train, spikes=spikes)
+        NeuralEncodingModel.__init__(self, 'lnln_exp', stim, spkcounts, filter_dims, minibatch_size,
+                                     frac_train=frac_train)
 
         # default # of subunits
         if 'W' in kwargs:
@@ -539,23 +531,6 @@ class LNLN(NeuralEncodingModel):
         # alternating optimization: switch between optimizing nonlinearities, and optimizing filters
         for alt_iter in range(num_alt):
 
-            # Fit nonlinearity
-            print('\n')
-            tableprint.table([], ['Fitting nonlinearity'], {'column_width': 20, 'line_char': '='})
-
-            # wrapper for the objective and gradient
-            def f_df_wrapper(f, d):
-                return self.f_df(theta_current['W'], f, d, param_gradient='f')
-
-            # run the optimization procedure for this parameter
-            theta_current['f'] = optimize_param(f_df_wrapper, 'f', check_grad, alt_iter + 0.5).copy()
-
-            # run the callback
-            df = self.print_test_results(theta_current)
-            avg = df.groupby('set').mean()
-            avg['Iteration'] = alt_iter + 0.5
-            self.convergence = self.convergence.append(avg)
-
             # Fit filters
             print('\n')
             tableprint.table([], ['Fitting filters'], {'column_width': 20, 'line_char': '='})
@@ -565,11 +540,28 @@ class LNLN(NeuralEncodingModel):
                 return self.f_df(W, theta_current['f'], d, param_gradient='W')
 
             # run the optimization procedure for this parameter
-            Wk = optimize_param(f_df_wrapper, 'W', check_grad, alt_iter + 1).copy()
+            Wk = optimize_param(f_df_wrapper, 'W', check_grad, alt_iter + 0.5).copy()
 
             # normalize filters
             for filter_index in range(Wk.shape[0]):
                 theta_current['W'][filter_index] = utilities.nrm(Wk[filter_index])
+
+            # run the callback
+            df = self.print_test_results(theta_current)
+            avg = df.groupby('set').mean()
+            avg['Iteration'] = alt_iter + 0.5
+            self.convergence = self.convergence.append(avg)
+
+            # Fit nonlinearity
+            print('\n')
+            tableprint.table([], ['Fitting nonlinearity'], {'column_width': 20, 'line_char': '='})
+
+            # wrapper for the objective and gradient
+            def f_df_wrapper(f, d):
+                return self.f_df(theta_current['W'], f, d, param_gradient='f')
+
+            # run the optimization procedure for this parameter
+            theta_current['f'] = optimize_param(f_df_wrapper, 'f', check_grad, alt_iter + 1).copy()
 
             # print and save test results
             df = self.print_test_results(theta_current)
