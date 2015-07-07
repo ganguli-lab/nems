@@ -23,7 +23,7 @@ Coming soon
 import copy
 from functools import partial
 import numpy as np
-from tentbasis import build_tents, eval_tents
+from tentbasis import build_tents, eval_tents, make_rcos_basis
 import nonlinearities
 import utilities
 from sfo_admm import SFO
@@ -43,7 +43,7 @@ class NeuralEncodingModel(object):
 
     """
 
-    def __init__(self, modeltype, stimulus, spkcounts, filter_dims, minibatch_size, frac_train=0.8):
+    def __init__(self, modeltype, stimulus, spkcounts, filter_dims, minibatch_size, frac_train=0.8, temporal_basis=None):
 
         # model name / subclass
         self.modeltype = str.lower(modeltype)
@@ -52,8 +52,9 @@ class NeuralEncodingModel(object):
         self.theta = None
         self.num_samples = spkcounts.size
         self.tau = filter_dims[-1]
-        self.filter_dims = filter_dims
-        self.stim_dim = np.prod(filter_dims[:-1])
+        self.tau_filt = self.tau if temporal_basis is None else temporal_basis.shape[1]
+        self.filter_dims = filter_dims[:-1] + (self.tau_filt,)
+        self.stim_dim = np.prod(self.filter_dims[:-1])
 
         # the length of the filter must be smaller than the length of the experiment
         assert self.tau <= self.num_samples, 'The temporal filter length must be less than the experiment length.'
@@ -88,10 +89,16 @@ class NeuralEncodingModel(object):
             minibatch_indices = slice(idx * minibatch_size, (idx + 1) * minibatch_size)
 
             # z-score the stimulus and save each minibatch, along with the rate and spikes if given
-            self.data.append({
-                'stim': slices[:, minibatch_indices, :],
-                'rate': rate_trim[minibatch_indices]
-            })
+            if temporal_basis is None:
+                self.data.append({
+                    'stim': slices[:, minibatch_indices, :],
+                    'rate': rate_trim[minibatch_indices]
+                })
+            else:
+                self.data.append({
+                    'stim': slices[:, minibatch_indices, :].dot(temporal_basis),
+                    'rate': rate_trim[minibatch_indices]
+                })
 
         # set and store random seed (for reproducibility)
         self.random_seed = 12345
@@ -126,7 +133,7 @@ class NeuralEncodingModel(object):
         """
         num_samples = float(self.data[0]['rate'].size)
         stas = [np.tensordot(d['stim'], d['rate'], axes=([1], [0])) / num_samples for d in self.data]
-        self.sta = np.mean(stas,axis=0).reshape(self.filter_dims)
+        self.sta = np.mean(stas, axis=0).reshape(self.filter_dims)
 
     def add_regularizer(self, theta_key, proxfun, **kwargs):
         """
@@ -262,8 +269,10 @@ class NeuralEncodingModel(object):
 
 
 class LNLN(NeuralEncodingModel):
-    def __init__(self, stim, spkcounts, filter_dims, minibatch_size=None, frac_train=0.8, num_subunits=1,
-                 num_tents=30, sigmasq=0.2, tent_type='gaussian', final_nonlinearity='softrect', **kwargs):
+    def __init__(self, stim, spkcounts, filter_dims, minibatch_size=None,
+                 frac_train=0.8, num_subunits=1, num_tents=30, sigmasq=0.2,
+                 tent_type='gaussian', final_nonlinearity='softrect',
+                 num_temporal_bases=None, **kwargs):
         """
         Initializes a two layer cascade linear-nonlinear (LNLN) model
 
@@ -330,8 +339,25 @@ class LNLN(NeuralEncodingModel):
         """
 
         # initialize the model object
-        NeuralEncodingModel.__init__(self, 'lnln', stim, spkcounts, filter_dims, minibatch_size,
-                                     frac_train=frac_train)
+        if num_temporal_bases is None:
+            NeuralEncodingModel.__init__(self, 'lnln', stim, spkcounts,
+                                         filter_dims, minibatch_size,
+                                         frac_train=frac_train)
+        else:
+            assert num_temporal_bases < filter_dims[-1], "Number of temporal basis functions must be less than the number of temporal dimensions"
+
+            # defaults
+            tmax = kwargs['tmax'] if 'tmax' in kwargs else 0.4
+            bias = kwargs['temporal_bias'] if 'temporal_bias' in kwargs else 0.2
+
+            # make raised cosine basis
+            self.temporal_basis = np.flipud(make_rcos_basis(np.linspace(0, tmax, filter_dims[-1]), num_temporal_bases, bias=bias)[1])
+
+            # build the reduced model
+            NeuralEncodingModel.__init__(self, 'lnln', stim, spkcounts,
+                                         filter_dims, minibatch_size,
+                                         frac_train=frac_train,
+                                         temporal_basis=self.temporal_basis)
 
         # default # of subunits
         self.num_subunits = kwargs['W'].shape[0] if 'W' in kwargs else num_subunits
@@ -344,7 +370,7 @@ class LNLN(NeuralEncodingModel):
 
         # initialize parameter dictionary
         self.theta_init = dict()
-        self.theta_init['W'] = np.zeros((self.num_subunits,) + (self.stim_dim, self.tau))
+        self.theta_init['W'] = np.zeros((self.num_subunits,) + (self.stim_dim, self.tau_filt))
         self.theta_init['f'] = np.zeros((self.num_subunits, self.tentparams['num_tents']))
 
         # initialize filter parameters
@@ -363,11 +389,11 @@ class LNLN(NeuralEncodingModel):
             # multiple subunits: random initialization
             if self.num_subunits > 1:
                 for idx in range(self.num_subunits):
-                    self.theta_init['W'][idx] = utilities.nrm(0.1 * np.random.randn(self.stim_dim, self.tau))
+                    self.theta_init['W'][idx] = utilities.nrm(0.1 * np.random.randn(self.stim_dim, self.tau_filt))
 
             # single subunit: initialize with the STA
             else:
-                self.theta_init['W'][0] = utilities.nrm(self.sta).reshape(-1,self.sta.shape[-1])
+                self.theta_init['W'][0] = utilities.nrm(self.sta).reshape(-1, self.sta.shape[-1])
 
         # initialize nonlinearity parameters
         if 'f' in kwargs:
