@@ -5,9 +5,11 @@ Utilities and helper functions for the neural encoding models package
 
 # imports
 import numpy as np
+from toolz import curry, compose
 
 # exports
 __all__ = ['rolling_window', 'nrm']
+
 
 def rolling_window(a, window):
     """
@@ -64,3 +66,16 @@ def nrm(x):
 
     """
     return x / np.linalg.norm(x.ravel())
+
+
+@curry
+def microshift(dx, W):
+    return W + dx*np.vstack(map(np.gradient, W.T)).T
+
+
+@curry
+def shift(i, W):
+    return np.vstack((W[i:, :], W[:i, :]))
+
+
+arr = compose(np.array, list)

@@ -20,6 +20,7 @@ from pymongo import MongoClient
 from datetime import datetime
 import numpy as np
 
+
 class Datastore(object):
     """
     Store parameters and objective values in a mongodb during optimization
@@ -63,7 +64,6 @@ class Datastore(object):
             'headers': self.headers,
             'createdOn': datetime.now().isoformat()
         })
-
 
     def insert(self, idx, data, spread=None):
         """

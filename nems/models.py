@@ -23,7 +23,7 @@ Coming soon
 import copy
 from functools import partial
 import numpy as np
-import tentbasis
+from tentbasis import build_tents, eval_tents
 import nonlinearities
 import utilities
 from sfo_admm import SFO
@@ -307,13 +307,13 @@ class LNLN(NeuralEncodingModel):
             number of subunits to use (default: 1), if a initial W is given, this parameter is unused
 
         num_tents : int, optional
-            number of tent basis functions to use for parameterizing nonlinearities
+            number of tent basis functions to use for parameterizing nonlinearities (default: 30)
 
         sigmasq : float, optional
             the size / scale of each tent basis function (default: 0.2)
 
         tent_type : string
-            the type of tent basis function to use (default: 'Gaussian')
+            the type of tent basis function to use (default: 'gaussian')
 
         final_nonlinearity : string
             a function from the `nonlinearities` module
@@ -330,20 +330,17 @@ class LNLN(NeuralEncodingModel):
         """
 
         # initialize the model object
-        NeuralEncodingModel.__init__(self, 'lnln_exp', stim, spkcounts, filter_dims, minibatch_size,
+        NeuralEncodingModel.__init__(self, 'lnln', stim, spkcounts, filter_dims, minibatch_size,
                                      frac_train=frac_train)
 
         # default # of subunits
-        if 'W' in kwargs:
-            self.num_subunits = kwargs['W'].shape[0]
-        else:
-            self.num_subunits = num_subunits
+        self.num_subunits = kwargs['W'].shape[0] if 'W' in kwargs else num_subunits
 
         # initialize tent basis functions
         num_tent_samples = 1000
         tent_span = (-5, 5)          # suitable for z-scored input
-        self.tentparams = tentbasis.build_tents(num_tent_samples, tent_span, num_tents,
-                                                tent_type=tent_type, sigmasq=sigmasq)
+        self.tentparams = build_tents(num_tent_samples, tent_span, num_tents,
+                                      tent_type=tent_type, sigmasq=sigmasq)
 
         # initialize parameter dictionary
         self.theta_init = dict()
@@ -629,11 +626,10 @@ class LNLN(NeuralEncodingModel):
 
         L = len(self.data)
         pb = ProgressBar(L)
-        H = self._hessian_minibatch(theta,0)
+        H = self._hessian_minibatch(theta, 0)
         pb.animate(1)
 
-        # return reduce(sum, map(lambda idx: self._hessian_minibatch(theta, idx), range(len(self.data)))) / float(len(self.data))
-        for idx in range(1,L):
+        for idx in range(1, L):
             H += self._hessian_minibatch(theta, idx)
             pb.animate(idx+1)
 
@@ -652,9 +648,9 @@ class LNLN(NeuralEncodingModel):
         u, z, zgrad, zhess, drdz, dr2dz2, rhat = self.rate(theta, self.data[data_index]['stim'], hess=True)
 
         # store the full Hessian
-        N = np.prod(theta['W'].shape[1:])
-        M = theta['W'].shape[0]
-        P = theta['f'].shape[1]
+        N = np.prod(theta['W'].shape[1:])       # filter dimension
+        M = theta['W'].shape[0]                 # number of subunits
+        P = theta['f'].shape[1]                 # nonlinearity parameters
         T = r.size
         H = np.zeros((N*M + P*M, N*M + P*M))
 
@@ -663,13 +659,13 @@ class LNLN(NeuralEncodingModel):
         hess_factor = r / (rhat**2)
 
         # nonlinearity projection
-        zproj = np.sum(theta['f'][:, np.newaxis, :] * zgrad, axis=2) # M by T
-        zproj2 = np.sum(theta['f'][:, np.newaxis, :] * zhess, axis=2) # M by T
+        zproj = np.sum(theta['f'][:, np.newaxis, :] * zgrad, axis=2)            # M by T
+        zproj2 = np.sum(theta['f'][:, np.newaxis, :] * zhess, axis=2)           # M by T
 
         # vectorized data
-        x_vec = np.rollaxis(self.data[data_index]['stim'],-1).reshape(N,T) # N x T
-        z_vec = np.rollaxis(z, -1).reshape(M*P, T) # M*P x T
-        scale_factor = np.diag(grad_factor * dr2dz2 + hess_factor * drdz**2) # diagonal(T)
+        x_vec = np.rollaxis(self.data[data_index]['stim'],-1).reshape(N,T)      # N x T
+        z_vec = np.rollaxis(z, -1).reshape(M*P, T)                              # M*P x T
+        scale_factor = np.diag(grad_factor * dr2dz2 + hess_factor * drdz**2)    # diagonal(T)
 
         # nonlinearity - nonlinearity portion
         H[-(M*P):, -(M*P):] = z_vec.dot(scale_factor.dot(z_vec.T))
@@ -677,8 +673,8 @@ class LNLN(NeuralEncodingModel):
         # loop over subunits
         for j1 in range(M):
 
-            zgrad_j1 = zproj[j1,:]
-            zhess_j1 = zproj2[j1,:]
+            zgrad_j1 = zproj[j1, :]
+            zhess_j1 = zproj2[j1, :]
 
             # scale factor grad
             sf_zgrad = scale_factor * np.diag(zgrad_j1)
@@ -690,7 +686,7 @@ class LNLN(NeuralEncodingModel):
             # subunit-subunit block
             for j2 in range(M):
 
-                zgrad_j2 = np.diag(zproj[j2,:])
+                zgrad_j2 = np.diag(zproj[j2, :])
 
                 # update this portion of the Hessian
                 H[j1*N:(j1+1)*N, j2*N:(j2+1)*N] = x_vec.dot((sf_zgrad * zgrad_j2).dot(x_vec.T))
@@ -725,7 +721,7 @@ class LNLN(NeuralEncodingModel):
         u = np.tensordot(theta['W'], stim, ([1, 2], [0, 2]))  # dims: (K x M)
 
         # evaluate input at tent basis functions
-        z, zgrad, zhess = tentbasis.eval_tents(u, self.tentparams, hess=hess)
+        z, zgrad, zhess = eval_tents(u, self.tentparams, hess=hess)
 
         # compute log(rate) and the firing rate
         r, drdz, dr2dz2 = self.final_nonlin_function(np.tensordot(theta['f'], z, ([0, 1], [0, 2])))  # dims: (M)

@@ -5,7 +5,9 @@ Each function returns the value and derivative of a nonlinearity. Given :math:`y
 :math:`y` and :math:`dy/dx`
 
 """
+
 import numpy as np
+
 
 def exp(x):
     """
@@ -34,6 +36,7 @@ def exp(x):
     dy2dx2 = y
 
     return y, dydx, dy2dx2
+
 
 def softrect(x):
     """
@@ -68,6 +71,7 @@ def softrect(x):
     dy2dx2 = x_exp / (1 + x_exp)**2
 
     return y, dydx, dy2dx2
+
 
 def linear(x):
     """

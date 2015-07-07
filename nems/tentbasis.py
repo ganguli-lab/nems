@@ -20,7 +20,9 @@ is parameterized as a linear combination (with weights given by :math:`\alpha`)
 of these tent functions.
 
 """
+
 import numpy as np
+
 
 def build_tents(num_tent_samples, tent_span, num_tents, tent_type='gaussian', sigmasq=0.2):
     """
@@ -69,6 +71,7 @@ def build_tents(num_tent_samples, tent_span, num_tents, tent_type='gaussian', si
     # return tent function parameters
     return tentparams
 
+
 def eval_tents(u, tentparams, hess=False):
     """
     Evaluate basis functions and derivative at given input value
@@ -113,6 +116,7 @@ def eval_tents(u, tentparams, hess=False):
     else:
         return z, zgrad, None
 
+
 def _make_ispline_basis(x, numBases, order=3, limits=None):
     """
     Generate a basis of piecewise linear functions
@@ -143,6 +147,7 @@ def _make_ispline_basis(x, numBases, order=3, limits=None):
 
     return Phi, centers
 
+
 def _eval_ispline_basis(x, centers, numBases, order=3):
     """
     Evaluates i-spline basis functions and derivatives at given values
@@ -164,6 +169,7 @@ def _eval_ispline_basis(x, centers, numBases, order=3):
     PhiGrad = np.vstack([_mspline(xr, centers, order, idx) for idx in range(numBases)]).T
 
     return Phi.reshape(x.shape + (-1,)), PhiGrad.reshape(x.shape + (-1,))
+
 
 def _make_linear_basis(x, numBases, limits=None):
     """Generate a basis of piecewise linear functions
@@ -204,6 +210,7 @@ def _make_linear_basis(x, numBases, limits=None):
 
     return Phi, centers
 
+
 def _eval_linear_basis(x, centers):
     """
     Evaluates gaussian basis functions and derivatives at given values
@@ -240,6 +247,7 @@ def _eval_linear_basis(x, centers):
 
     return Phi.reshape(x.shape + (-1,)), PhiGrad.reshape(x.shape + (-1,))  # , PhiGrad2
 
+
 def _make_gaussian_basis(x, numBases, sigmasq=0.2, limits=None):
     """
     Generates a basis of Gaussian tent functions
@@ -271,6 +279,7 @@ def _make_gaussian_basis(x, numBases, sigmasq=0.2, limits=None):
         Phi[:,j] = np.exp( -0.5*(x - centers[j])**2 / sigmasq )
 
     return Phi, centers
+
 
 def _eval_gaussian_basis(x, centers, sigmasq, hess=False):
     """
@@ -309,6 +318,7 @@ def _eval_gaussian_basis(x, centers, sigmasq, hess=False):
     else:
         return Phi.reshape(x.shape + (-1,)), PhiGrad.reshape(x.shape + (-1,))
 
+
 def eval_basis(u, x, Phi, PhiGrad):
     """
     Evaluates a function composed of basis functions given by vectors Phi,
@@ -330,6 +340,7 @@ def eval_basis(u, x, Phi, PhiGrad):
 
     inds = _find_nearest(x, u)
     return Phi[inds, :], PhiGrad[inds, :]
+
 
 def make_rcos_basis(tau, numBases, bias=0.2):
     """
@@ -361,9 +372,10 @@ def make_rcos_basis(tau, numBases, bias=0.2):
 
     # make the basis
     Phi = _rcos(logTime.reshape(-1,1), centers.reshape(1,-1), np.mean(np.diff(centers)));
-    
+
     # return basis and orthogonalized basis
     return Phi, orth(Phi)
+
 
 def _rcos(x, c, dc):
     """
@@ -378,6 +390,7 @@ def _rcos(x, c, dc):
     """
 
     return 0.5*(np.cos(np.maximum(-np.pi,np.minimum(np.pi,0.5*(x-c)*np.pi/dc)))+1)
+
 
 def _find_nearest(x, values):
     """
@@ -394,6 +407,7 @@ def _find_nearest(x, values):
 
     """
     return np.array([np.abs(x-v).argmin() for v in values.ravel()]).reshape(values.shape)
+
 
 def _mspline(x, centers, order, idx):
     """
@@ -421,6 +435,7 @@ def _mspline(x, centers, order, idx):
 
     return order * ((x - centers[idx]) * _mspline(x, centers, order - 1, idx) + (centers[idx + order] - x) *
                     _mspline(x, centers, order - 1, idx + 1)) / ((order - 1) * (centers[idx + order] - centers[idx]))
+
 
 def _ispline(x, centers, order, idx):
     """
