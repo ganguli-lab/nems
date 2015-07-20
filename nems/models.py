@@ -120,8 +120,8 @@ class NeuralEncodingModel(object):
         self.meanrate = np.mean(rate_concat)
 
         # store metadata and convergence information in pandas DataFrames
-        self.metadata = pd.DataFrame()
-        self.convergence = pd.DataFrame()
+        #self.metadata = pd.DataFrame()
+        #self.convergence = pd.DataFrame()
 
     def __str__(self):
         return "Neural encoding model, " + self.modeltype
@@ -376,6 +376,16 @@ class LNLN(NeuralEncodingModel):
         # initialize filter parameters
         if 'W' in kwargs:
 
+            # check if we need to project onto the temporal basis
+            if kwargs['W'].shape[-1] != self.tau_filt:
+
+                if kwargs['W'].shape[-1] == self.tau:
+                    kwargs['W'] = kwargs['W'].dot(self.temporal_basis)
+
+                elif kwargs['W'].shape[-1] < self.tau:
+                    temp = kwargs['W'].shape[-1]
+                    kwargs['W'] = kwargs['W'].dot(self.temporal_basis[:temp, :])
+
             # ensure dimensions are consistent
             assert self.theta_init['W'].shape == kwargs['W'].shape, "Shape of the filters (`W` keyword argument) " \
                                                                     "are inconsistent with the given filter dimensions."
@@ -511,8 +521,8 @@ class LNLN(NeuralEncodingModel):
         """
 
         # reset the metadata and convergence data structures
-        self.metadata = pd.DataFrame()
-        self.convergence = pd.DataFrame()
+        #self.metadata = pd.DataFrame()
+        #self.convergence = pd.DataFrame()
 
         # grab the initial parameters
         theta_current = {'W': self.theta_init['W'].copy(), 'f': self.theta_init['f'].copy()}
@@ -541,15 +551,15 @@ class LNLN(NeuralEncodingModel):
 
             # add metadata to converge dataframe
             opt.metadata['Iteration'] = cur_iter
-            self.metadata = self.metadata.append(opt.metadata)
+            #self.metadata = self.metadata.append(opt.metadata)
 
             # return parameters and optimization metadata
             return opt.theta
 
         # print results based on the initial parameters
-        print('\n')
-        tableprint.table([], ['Initial parameters'], {'column_width': 20, 'line_char': '='})
-        self.print_test_results(theta_current)
+        #print('\n')
+        #tableprint.table([], ['Initial parameters'], {'column_width': 20, 'line_char': '='})
+        #self.print_test_results(theta_current)
 
         # alternating optimization: switch between optimizing nonlinearities, and optimizing filters
         for alt_iter in range(num_alt):
@@ -570,10 +580,10 @@ class LNLN(NeuralEncodingModel):
                 theta_current['W'][filter_index] = utilities.nrm(Wk[filter_index])
 
             # run the callback
-            df = self.print_test_results(theta_current)
-            avg = df.groupby('set').mean()
-            avg['Iteration'] = alt_iter + 0.5
-            self.convergence = self.convergence.append(avg)
+            #df = self.print_test_results(theta_current)
+            #avg = df.groupby('set').mean()
+            #avg['Iteration'] = alt_iter + 0.5
+            #self.convergence = self.convergence.append(avg)
 
             # Fit nonlinearity
             print('\n')
@@ -587,10 +597,10 @@ class LNLN(NeuralEncodingModel):
             theta_current['f'] = optimize_param(f_df_wrapper, 'f', check_grad, alt_iter + 1).copy()
 
             # print and save test results
-            df = self.print_test_results(theta_current)
-            avg = df.groupby('set').mean()
-            avg['Iteration'] = alt_iter + 1
-            self.convergence = self.convergence.append(avg)
+            #df = self.print_test_results(theta_current)
+            #avg = df.groupby('set').mean()
+            #avg['Iteration'] = alt_iter + 1
+            #self.convergence = self.convergence.append(avg)
 
         # store learned parameters
         self.theta = copy.deepcopy(theta_current)
