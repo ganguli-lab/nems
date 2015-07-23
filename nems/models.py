@@ -31,7 +31,6 @@ from proxalgs.core import Optimizer
 from proxalgs import operators
 import pandas as pd
 import tableprint
-from progressbar import ProgressBar
 
 # exports
 __all__ = ['NeuralEncodingModel', 'LNLN']
@@ -108,9 +107,8 @@ class NeuralEncodingModel(object):
         # split up data into train/validation/test sets
         num_train = int(np.round(frac_train * num_minibatches))
         indices = np.arange(num_minibatches)
-        np.random.shuffle(indices)
-        self.train_indices = indices[:num_train]
-        self.test_indices = indices[num_train:]
+        self.train_indices = set(np.random.choice(indices, size=num_train, replace=False))
+        self.test_indices = set(indices) - self.train_indices
 
         # compute the STA
         self._getsta()
@@ -118,10 +116,6 @@ class NeuralEncodingModel(object):
         # compute firing rate statistics
         rate_concat = np.hstack([d['rate'] for d in self.data])
         self.meanrate = np.mean(rate_concat)
-
-        # store metadata and convergence information in pandas DataFrames
-        #self.metadata = pd.DataFrame()
-        #self.convergence = pd.DataFrame()
 
     def __str__(self):
         return "Neural encoding model, " + self.modeltype
@@ -210,7 +204,8 @@ class NeuralEncodingModel(object):
 
         # helper function
         def update_results(idx, class_label):
-            res = self.metrics(idx, theta)
+            rhat = self.rate(theta, self.data[idx]['stim'])[-1]
+            res = self.metrics(idx, rhat)
             res.update({class_key: class_label})
             results.append(res)
             indices.append(idx)
@@ -347,7 +342,7 @@ class LNLN(NeuralEncodingModel):
             assert num_temporal_bases < filter_dims[-1], "Number of temporal basis functions must be less than the number of temporal dimensions"
 
             # defaults
-            tmax = kwargs['tmax'] if 'tmax' in kwargs else 0.4
+            tmax = kwargs['tmax'] if 'tmax' in kwargs else 0.5
             bias = kwargs['temporal_bias'] if 'temporal_bias' in kwargs else 0.2
 
             # make raised cosine basis
@@ -520,9 +515,8 @@ class LNLN(NeuralEncodingModel):
 
         """
 
-        # reset the metadata and convergence data structures
-        #self.metadata = pd.DataFrame()
-        #self.convergence = pd.DataFrame()
+        # store (temporary) test results
+        results = pd.DataFrame()
 
         # grab the initial parameters
         theta_current = {'W': self.theta_init['W'].copy(), 'f': self.theta_init['f'].copy()}
@@ -549,17 +543,13 @@ class LNLN(NeuralEncodingModel):
             # run the optimization procedure
             opt.minimize(theta_current[param_key], max_iter=max_iter, disp=disp, callback=callback)
 
-            # add metadata to converge dataframe
-            opt.metadata['Iteration'] = cur_iter
-            #self.metadata = self.metadata.append(opt.metadata)
-
             # return parameters and optimization metadata
             return opt.theta
 
         # print results based on the initial parameters
-        #print('\n')
-        #tableprint.table([], ['Initial parameters'], {'column_width': 20, 'line_char': '='})
-        #self.print_test_results(theta_current)
+        print('\n')
+        tableprint.table([], ['Initial parameters'], {'column_width': 20, 'line_char': '='})
+        self.print_test_results(theta_current)
 
         # alternating optimization: switch between optimizing nonlinearities, and optimizing filters
         for alt_iter in range(num_alt):
@@ -580,10 +570,9 @@ class LNLN(NeuralEncodingModel):
                 theta_current['W'][filter_index] = utilities.nrm(Wk[filter_index])
 
             # run the callback
-            #df = self.print_test_results(theta_current)
-            #avg = df.groupby('set').mean()
-            #avg['Iteration'] = alt_iter + 0.5
-            #self.convergence = self.convergence.append(avg)
+            df = self.print_test_results(theta_current)
+            df['Iteration'] = alt_iter + 0.5
+            results = results.append(df)
 
             # Fit nonlinearity
             print('\n')
@@ -597,15 +586,17 @@ class LNLN(NeuralEncodingModel):
             theta_current['f'] = optimize_param(f_df_wrapper, 'f', check_grad, alt_iter + 1).copy()
 
             # print and save test results
-            #df = self.print_test_results(theta_current)
-            #avg = df.groupby('set').mean()
-            #avg['Iteration'] = alt_iter + 1
-            #self.convergence = self.convergence.append(avg)
+            df = self.print_test_results(theta_current)
+            df['Iteration'] = alt_iter + 1
+            results = results.append(df)
 
-        # store learned parameters
+        # store learned parameters, convergence
         self.theta = copy.deepcopy(theta_current)
+        self.convergence = results.groupby(['Iteration', 'set']).mean().unstack(1)
 
-    def metrics(self, data_index, theta):
+        return self.convergence
+
+    def metrics(self, data_index, rhat):
         """
         Evaluate metrics on a given minibatch.
 
@@ -635,7 +626,6 @@ class LNLN(NeuralEncodingModel):
         data = self.data[data_index]
 
         # compute the model firing rate
-        rhat = self.rate(theta, data['stim'])[-1]
         logr = np.log(rhat)
 
         # correlation coefficient
