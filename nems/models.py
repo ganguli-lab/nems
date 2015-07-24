@@ -651,13 +651,11 @@ class LNLN(NeuralEncodingModel):
         """
 
         L = len(self.data)
-        pb = ProgressBar(L)
         H = self._hessian_minibatch(theta, 0)
-        pb.animate(1)
 
         for idx in range(1, L):
+            print('{} of {}'.format(idx, L))
             H += self._hessian_minibatch(theta, idx)
-            pb.animate(idx+1)
 
         return H / float(L)
 
