@@ -25,12 +25,13 @@ from functools import partial
 import numpy as np
 from tentbasis import build_tents, eval_tents, make_rcos_basis
 import nonlinearities
-import utilities
 from sfo_admm import SFO
 from proxalgs.core import Optimizer
 from proxalgs import operators
 import pandas as pd
 import tableprint
+from . import utilities
+from . import metrics
 
 # exports
 __all__ = ['NeuralEncodingModel', 'LNLN']
@@ -593,6 +594,7 @@ class LNLN(NeuralEncodingModel):
         # store learned parameters, convergence
         self.theta = copy.deepcopy(theta_current)
         self.convergence = results.groupby(['Iteration', 'set']).mean().unstack(1)
+        self.convergence_sem = results.groupby(['Iteration', 'set']).sem().unstack(1)
 
         return self.convergence
 
@@ -623,26 +625,14 @@ class LNLN(NeuralEncodingModel):
         """
 
         # get this minibatch of data
-        data = self.data[data_index]
-
-        # compute the model firing rate
-        logr = np.log(rhat)
+        r = self.data[data_index]['rate']
 
         # correlation coefficient
-        cc = float(np.corrcoef(np.vstack((rhat, data['rate'])))[0, 1])
-
-        # log-likelihood improvement over a mean rate model (in bits per spike)
-        mu = float(np.mean(data['rate'] * np.log(self.meanrate) - self.meanrate))
-        fobj = (float(np.mean(data['rate'] * logr - rhat)) - mu) / (self.meanrate * np.log(2))
-
-        # mean squared error
-        mse = float(np.mean((rhat - data['rate']) ** 2))
-        rate_var = float(np.mean((np.mean(data['rate']) - data['rate']) ** 2))
-
-        # fraction of explained variacne
-        fev = 1.0 - (mse / rate_var)
-
-        return {'CC': cc, 'LLI': fobj, 'MSE': mse, 'FEV': fev}
+        cc = metrics.cc(r, rhat)
+        lli = metrics.lli(r, rhat, meanrate=self.meanrate)
+        rmse = metrics.rmse(r, rhat)
+        fev = metrics.fev(r, rhat)
+        return {'CC': cc, 'LLI': lli, 'RMSE': rmse, 'FEV': fev}
 
     def hessian(self, theta):
         """

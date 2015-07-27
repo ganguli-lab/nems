@@ -7,9 +7,6 @@ Utilities and helper functions for the neural encoding models package
 import numpy as np
 from toolz import curry, compose
 
-# exports
-__all__ = ['rolling_window', 'nrm']
-
 
 def rolling_window(a, window):
     """
