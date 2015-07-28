@@ -209,10 +209,10 @@ class NeuralEncodingModel(object):
                                       metrics.Score._fields))
 
         # evaluate metrics on train / test data
-        train = np.mean([update_results(idx) for idx in self.train_indices])
-        test = np.mean([update_results(idx) for idx in self.test_indices])
+        train = np.mean([update_results(idx) for idx in self.train_indices], axis=0)
+        test = np.mean([update_results(idx) for idx in self.test_indices], axis=0)
 
-        return train, test
+        return {'train': train, 'test': test}
 
     def print_test_results(self, theta):
         """
@@ -226,11 +226,11 @@ class NeuralEncodingModel(object):
         """
 
         # run test
-        train, test = self.test(theta)
+        results = self.test(theta)
 
         # compute averages
-        data = [['Test'] + list(test),
-                ['Train'] + list(train)]
+        data = [['Test'] + list(results['test']),
+                ['Train'] + list(results['train'])]
 
         # build column headers (names of metrics) and data matrix
         headers = ['Set'] + list(map(str.upper, metrics.Score._fields))
