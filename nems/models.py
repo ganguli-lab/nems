@@ -1,17 +1,23 @@
 """
 Objects for fitting and testing Neural Encoding models
 
-This module provides a set of objects useful for fitting neural encoding models. These are typically probabilistic
-models of the response of a sensory neuron to an external stimulus. For example, linear-nonlinear-poisson (LNP) or
-generalized linear models (GLMs) fall under this category.
+This module provides objects useful for fitting neural encoding models (nems).
+Nems are typically probabilistic models of the response of a sensory neuron to
+external stimuli. For example, linear-nonlinear-poisson (LNP) or generalized
+linear models (GLMs) fall under this category.
 
-The module exposes classes which contain methods useful for training and testing encoding models given neural data
-recorded in an experiment. For more information, see the documentation (TODO: website)
+The module exposes classes which aid training and testing encoding models given
+neural data recorded in an sensory experiment.
 
 Classes
 -------
-- `NeuralEncodingModel` -- A super class which contains methods that are common to all encoding models
-- `LNLN` -- A subclass of `NeuralEncodingModel` that fits two layer models consisting of alternating layers of linear filtering and nonlinear thresholding operations. The parameters for the filter and nonlinearities of the first layer are learned, while the linear filter and nonlinearity of the second layer are fixed.
+- `NeuralEncodingModel` -- A super class which contains methods that are common
+    to all encoding models
+- `LNLN` -- A subclass of `NeuralEncodingModel` that fits two layer models
+    consisting of alternating layers of linear filtering and nonlinear
+    thresholding operations. The parameters for the filter and nonlinearities
+    of the first layer are learned, while the linear filter and nonlinearity of
+    the second layer are fixed.
 
 References
 ----------
@@ -19,19 +25,21 @@ Coming soon
 
 """
 
-# imports
+# standard library imports
 import copy
 from functools import partial
+
+# third party packages
 import numpy as np
-from tentbasis import build_tents, eval_tents, make_rcos_basis
-import nonlinearities
-from sfo_admm import SFO
-from proxalgs.core import Optimizer
-from proxalgs import operators
-import pandas as pd
 import tableprint
+from proxalgs import Optimizer, operators
+
+# relative imports
 from . import utilities
 from . import metrics
+from . import nonlinearities
+from .sfo_admm import SFO
+from .tentbasis import build_tents, eval_tents, make_rcos_basis
 
 # exports
 __all__ = ['NeuralEncodingModel', 'LNLN']
@@ -39,11 +47,15 @@ __all__ = ['NeuralEncodingModel', 'LNLN']
 
 class NeuralEncodingModel(object):
     """
-    Neural enoding model object
+    Neural enoding model super class
+
+    Contains helper functions for instantiating, fitting, and testing
+    neural encoding models.
 
     """
 
-    def __init__(self, modeltype, stimulus, spkcounts, filter_dims, minibatch_size, frac_train=0.8, temporal_basis=None):
+    def __init__(self, modeltype, stimulus, spkcounts, filter_dims,
+                 minibatch_size, frac_train=0.8, temporal_basis=None):
 
         # model name / subclass
         self.modeltype = str.lower(modeltype)
@@ -72,7 +84,7 @@ class NeuralEncodingModel(object):
         if minibatch_size is None:
 
             # choose number of minibatches
-            minibatch_size = np.ceil(10 * np.sqrt(self.num_samples)).astype('int')
+            minibatch_size = int(np.ceil(10 * np.sqrt(self.num_samples)))
             num_minibatches = int(self.num_samples / minibatch_size)
 
         else:
@@ -113,10 +125,6 @@ class NeuralEncodingModel(object):
 
         # compute the STA
         self._getsta()
-
-        # compute firing rate statistics
-        rate_concat = np.hstack([d['rate'] for d in self.data])
-        self.meanrate = np.mean(rate_concat)
 
     def __str__(self):
         return "Neural encoding model, " + self.modeltype
@@ -181,47 +189,30 @@ class NeuralEncodingModel(object):
 
         Returns
         -------
-        results : DataFrame
-            A pandas dataframe with the following columsn: the minibatch index, a 'train' or 'test' label, and any
-            keywords returned by the metrics function. Each row in the dataframe consists of the metrics evaluated
-            on a single minibatch of data.
-
-        stats : dict
-            Statistics on just the held out minibatches. Keys correspond to the keys in metrics, values are the average
-            computed over the test minibatches.
+        train_results : list of tuples
+        test_results : list of tuples
 
         Examples
         --------
         Given an initialized and trained instance of NeuralEncodingModel, you can test the model on
         held out data as follows:
 
-        >>> results, avg = model.test(model.theta)
+        >>> train_results, test_results = model.test(model.theta)
 
         """
 
-        results = list()
-        indices = list()
-        class_key = 'set'
-
         # helper function
-        def update_results(idx, class_label):
-            rhat = self.rate(theta, self.data[idx]['stim'])[-1]
-            res = self.metrics(idx, rhat)
-            res.update({class_key: class_label})
-            results.append(res)
-            indices.append(idx)
+        def update_results(idx):
+            d = self.data[idx]
+            rhat = self.rate(theta, d['stim'])[-1]
+            return metrics.Score(*map(lambda k: metrics.__dict__[k](d['rate'], rhat),
+                                      metrics.Score._fields))
 
         # evaluate metrics on train / test data
-        [update_results(idx, 'train') for idx in self.train_indices]
-        [update_results(idx, 'test') for idx in self.test_indices]
+        train = [update_results(idx) for idx in self.train_indices]
+        test = [update_results(idx) for idx in self.test_indices]
 
-        # create DataFrame to store results
-        df = pd.DataFrame(data=results, index=indices)
-
-        # compute the average over the test minibatches
-        avg = dict(df.loc[df[class_key] == 'test'].mean())
-
-        return df, avg
+        return train, test
 
     def print_test_results(self, theta):
         """
@@ -235,33 +226,17 @@ class NeuralEncodingModel(object):
         """
 
         # run test
-        df, test_res = self.test(theta)
+        train, test = self.test(theta)
 
-        # also compute training results, and spreads
-        ntrain = (df['set'] == 'train').sum()
-        ntest = (df['set'] == 'test').sum()
-        train_res = dict(df.loc[df['set'] == 'train'].mean())
-        train_spread = dict(df.loc[df['set'] == 'train'].std())
-        test_spread = dict(df.loc[df['set'] == 'test'].std())
+        # compute averages
+        data = [['Test'] + list(np.mean(test, axis=0)),
+                ['Train'] + list(np.mean(train, axis=0))]
 
         # build column headers (names of metrics) and data matrix
-        headers = ['Set']
-        data = [['train'], ['test']]
-
-        for key in test_res.keys():
-
-            # headers
-            headers += [key + ' (mean)']
-            headers += [key + ' (sem)']
-
-            # data (mean + standard error of the mean)
-            data[0] += [train_res[key], train_spread[key] / np.sqrt(ntrain)]
-            data[1] += [test_res[key], test_spread[key] / np.sqrt(ntest)]
+        headers = ['Set'] + list(map(str.upper, metrics.Score._fields))
 
         # print the table
         tableprint.table(data, headers, {'column_width': 10, 'precision': '3g'})
-
-        return df
 
 
 class LNLN(NeuralEncodingModel):
@@ -516,9 +491,6 @@ class LNLN(NeuralEncodingModel):
 
         """
 
-        # store (temporary) test results
-        results = pd.DataFrame()
-
         # grab the initial parameters
         theta_current = {'W': self.theta_init['W'].copy(), 'f': self.theta_init['f'].copy()}
 
@@ -571,9 +543,7 @@ class LNLN(NeuralEncodingModel):
                 theta_current['W'][filter_index] = utilities.nrm(Wk[filter_index])
 
             # run the callback
-            df = self.print_test_results(theta_current)
-            df['Iteration'] = alt_iter + 0.5
-            results = results.append(df)
+            self.print_test_results(theta_current)
 
             # Fit nonlinearity
             print('\n')
@@ -587,52 +557,10 @@ class LNLN(NeuralEncodingModel):
             theta_current['f'] = optimize_param(f_df_wrapper, 'f', check_grad, alt_iter + 1).copy()
 
             # print and save test results
-            df = self.print_test_results(theta_current)
-            df['Iteration'] = alt_iter + 1
-            results = results.append(df)
+            self.print_test_results(theta_current)
 
         # store learned parameters, convergence
         self.theta = copy.deepcopy(theta_current)
-        self.convergence = results.groupby(['Iteration', 'set']).mean().unstack(1)
-        self.convergence_sem = results.groupby(['Iteration', 'set']).sem().unstack(1)
-
-        return self.convergence
-
-    def metrics(self, data_index, rhat):
-        """
-        Evaluate metrics on a given minibatch.
-
-        Parameters
-        ----------
-        data_index : int
-            An index into the array of minibatches (`self.data`) the evaluate
-
-        theta : dict
-            The parameters to use in the evaluation
-
-        Returns
-        -------
-        metrics : dict
-            A dictionary whose keys are the names of metrics applied to evaluate the model parameters on the given
-            minibatch, and whose values are single numbers.
-
-        See Also
-        --------
-        NeuralEncodingModel.test
-            The `test` function in the super class NeuralEncodingModel relies on the metrics function to return
-            aggregate statistics over all minibatches.
-
-        """
-
-        # get this minibatch of data
-        r = self.data[data_index]['rate']
-
-        # correlation coefficient
-        cc = metrics.cc(r, rhat)
-        lli = metrics.lli(r, rhat, meanrate=self.meanrate)
-        rmse = metrics.rmse(r, rhat)
-        fev = metrics.fev(r, rhat)
-        return {'CC': cc, 'LLI': lli, 'RMSE': rmse, 'FEV': fev}
 
     def hessian(self, theta):
         """
