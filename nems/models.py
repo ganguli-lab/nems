@@ -28,6 +28,7 @@ Coming soon
 # standard library imports
 import copy
 from functools import partial
+from collections import defaultdict
 
 # third party packages
 import numpy as np
@@ -212,7 +213,7 @@ class NeuralEncodingModel(object):
         train = np.mean([update_results(idx) for idx in self.train_indices], axis=0)
         test = np.mean([update_results(idx) for idx in self.test_indices], axis=0)
 
-        return {'train': train, 'test': test}
+        return {'train': train, 'test': test, 'labels': metrics.Score._fields}
 
     def print_test_results(self, theta):
         """
@@ -237,6 +238,8 @@ class NeuralEncodingModel(object):
 
         # print the table
         tableprint.table(data, headers, {'column_width': 10, 'precision': '3g'})
+
+        return results
 
 
 class LNLN(NeuralEncodingModel):
@@ -497,6 +500,15 @@ class LNLN(NeuralEncodingModel):
         # get list of training data
         train_data = [self.data[idx] for idx in self.train_indices]
 
+        # store train/test results during optimization
+        self.convergence = defaultdict(list)
+        def update_results():
+
+            if disp > 0:
+                tmp_results = self.print_test_results(theta_current)
+                for k in ('train', 'test'):
+                    self.convergence[k].append(tmp_results[k])
+
         # runs the optimization procedure for one set of parameters (a single leg of the alternating minimization)
         def optimize_param(f_df_wrapper, param_key, check_grad, cur_iter):
 
@@ -522,7 +534,9 @@ class LNLN(NeuralEncodingModel):
         # print results based on the initial parameters
         print('\n')
         tableprint.table([], ['Initial parameters'], {'column_width': 20, 'line_char': '='})
-        self.print_test_results(theta_current)
+
+        # print results and store
+        update_results()
 
         # alternating optimization: switch between optimizing nonlinearities, and optimizing filters
         for alt_iter in range(num_alt):
@@ -542,8 +556,8 @@ class LNLN(NeuralEncodingModel):
             for filter_index in range(Wk.shape[0]):
                 theta_current['W'][filter_index] = utilities.nrm(Wk[filter_index])
 
-            # run the callback
-            self.print_test_results(theta_current)
+            # print and save test results
+            update_results()
 
             # Fit nonlinearity
             print('\n')
@@ -557,9 +571,9 @@ class LNLN(NeuralEncodingModel):
             theta_current['f'] = optimize_param(f_df_wrapper, 'f', check_grad, alt_iter + 1).copy()
 
             # print and save test results
-            self.print_test_results(theta_current)
+            update_results()
 
-        # store learned parameters, convergence
+        # store learned parameters
         self.theta = copy.deepcopy(theta_current)
 
     def hessian(self, theta):
