@@ -39,6 +39,7 @@ from proxalgs import Optimizer, operators
 from . import utilities
 from . import metrics
 from . import nonlinearities
+from . import visualization
 from .sfo_admm import SFO
 from .tentbasis import build_tents, eval_tents, make_rcos_basis
 
@@ -240,6 +241,9 @@ class NeuralEncodingModel(object):
         tableprint.table(data, headers, {'column_width': 10, 'precision': '3g'})
 
         return results
+
+    def plot(self):
+        visualization.plot(self)
 
 
 class LNLN(NeuralEncodingModel):

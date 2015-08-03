@@ -51,7 +51,7 @@ def plot(mdl, cmap='seismic'):
     tx = mdl.tentparams['tent_x']
 
     # create the figure
-    fig = plt.figure(figsize=(12, 8))
+    fig = plt.figure(figsize=(4*nsub, 8))
 
     maxval = compose(np.max, np.abs, np.vstack)(mdl.theta['W'])
 
