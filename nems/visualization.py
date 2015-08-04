@@ -47,9 +47,6 @@ def plot(mdl, cmap='seismic'):
     """
     nsub = mdl.num_subunits
 
-    Phi = mdl.tentparams['Phi']
-    tx = mdl.tentparams['tent_x']
-
     # create the figure
     fig = plt.figure(figsize=(4*nsub, 8))
 
@@ -67,7 +64,7 @@ def plot(mdl, cmap='seismic'):
     for j in range(nsub):
         f = mdl.theta['f'][j]
         ax = fig.add_subplot(2, nsub, j+nsub+1)
-        ax.plot(tx, Phi.dot(f[:-1]) + f[-1], 'k-')
+        mdl.tents.plot(f)
         ax.set_xlim(-4, 4)
 
 

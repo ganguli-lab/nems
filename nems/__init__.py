@@ -24,3 +24,6 @@ __version__ = '0.2.1'
 __all__ = ['models', 'objectives', 'tentbasis', 'utilities', 'visualization']
 
 from .models import *
+from . import tentbasis
+from . import objectives
+from . import visualization as viz

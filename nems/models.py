@@ -40,8 +40,8 @@ from . import utilities
 from . import metrics
 from . import nonlinearities
 from . import visualization
+from . import tentbasis
 from .sfo_admm import SFO
-from .tentbasis import build_tents, eval_tents, make_rcos_basis
 
 # exports
 __all__ = ['NeuralEncodingModel', 'LNLN']
@@ -248,9 +248,9 @@ class NeuralEncodingModel(object):
 
 class LNLN(NeuralEncodingModel):
     def __init__(self, stim, spkcounts, filter_dims, minibatch_size=None,
-                 frac_train=0.8, num_subunits=1, num_tents=30, sigmasq=0.2,
-                 tent_type='gaussian', final_nonlinearity='softrect',
-                 num_temporal_bases=None, **kwargs):
+                 frac_train=0.8, num_subunits=1, num_tents=10, sigmasq=0.5,
+                 final_nonlinearity='softrect', num_temporal_bases=None,
+                 **kwargs):
         """
         Initializes a two layer cascade linear-nonlinear (LNLN) model
 
@@ -329,7 +329,7 @@ class LNLN(NeuralEncodingModel):
             bias = kwargs['temporal_bias'] if 'temporal_bias' in kwargs else 0.2
 
             # make raised cosine basis
-            self.temporal_basis = np.flipud(make_rcos_basis(np.linspace(0, tmax, filter_dims[-1]), num_temporal_bases, bias=bias)[1])
+            self.temporal_basis = np.flipud(tentbasis.make_rcos_basis(np.linspace(0, tmax, filter_dims[-1]), num_temporal_bases, bias=bias)[1])
 
             # build the reduced model
             NeuralEncodingModel.__init__(self, 'lnln', stim, spkcounts,
@@ -341,15 +341,13 @@ class LNLN(NeuralEncodingModel):
         self.num_subunits = kwargs['W'].shape[0] if 'W' in kwargs else num_subunits
 
         # initialize tent basis functions
-        num_tent_samples = 1000
         tent_span = (-5, 5)          # suitable for z-scored input
-        self.tentparams = build_tents(num_tent_samples, tent_span, num_tents,
-                                      tent_type=tent_type, sigmasq=sigmasq)
+        self.tents = tentbasis.Gaussian(tent_span, num_tents, sigmasq=sigmasq)
 
         # initialize parameter dictionary
         self.theta_init = dict()
         self.theta_init['W'] = np.zeros((self.num_subunits,) + (self.stim_dim, self.tau_filt))
-        self.theta_init['f'] = np.zeros((self.num_subunits, self.tentparams['num_tents']))
+        self.theta_init['f'] = np.zeros((self.num_subunits, self.tents.num_params))
 
         # initialize filter parameters
         if 'W' in kwargs:
@@ -397,9 +395,9 @@ class LNLN(NeuralEncodingModel):
 
             # initialize each subunit nonlinearity to be linear
             for idx in range(self.num_subunits):
-                ts = self.tentparams['tent_span']
-                nonlin_init = np.linspace(ts[0], ts[1], self.tentparams['num_tent_samples'])
-                self.theta_init['f'][idx,:] = np.append(np.linalg.lstsq(self.tentparams['Phi'], nonlin_init)[0], 0)
+                ts = self.tents.tent_span
+                nonlin_init = np.linspace(ts[0], ts[1], 1000)
+                self.theta_init['f'][idx] = self.tents.fit(nonlin_init, nonlin_init)
 
         # initialize regularizers
         self.regularizers = {'W': list(), 'f': list()}
@@ -681,8 +679,7 @@ class LNLN(NeuralEncodingModel):
         u = np.tensordot(theta['W'], stim, ([1, 2], [0, 2]))  # dims: (K x M)
 
         # evaluate input at tent basis functions
-        z, zgrad, zhess = eval_tents(u, self.tentparams, hess=hess)
-        # z, zgrad, zhess = self.nonlinearity(u, hess=False)
+        z, zgrad, zhess = self.tents(u, hess=False)
 
         # compute log(rate) and the firing rate
         r, drdz, dr2dz2 = self.final_nonlin_function(np.tensordot(theta['f'], z, ([0, 1], [0, 2])))  # dims: (M)
