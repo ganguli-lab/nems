@@ -682,6 +682,7 @@ class LNLN(NeuralEncodingModel):
 
         # evaluate input at tent basis functions
         z, zgrad, zhess = eval_tents(u, self.tentparams, hess=hess)
+        # z, zgrad, zhess = self.nonlinearity(u, hess=False)
 
         # compute log(rate) and the firing rate
         r, drdz, dr2dz2 = self.final_nonlin_function(np.tensordot(theta['f'], z, ([0, 1], [0, 2])))  # dims: (M)
