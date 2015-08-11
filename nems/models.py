@@ -122,8 +122,9 @@ class NeuralEncodingModel(object):
         # split up data into train/validation/test sets
         num_train = int(np.round(frac_train * num_minibatches))
         indices = np.arange(num_minibatches)
-        self.train_indices = set(np.random.choice(indices, size=num_train, replace=False))
-        self.test_indices = set(indices) - self.train_indices
+        self.indices = dict()
+        self.indices['train'] = set(np.random.choice(indices, size=num_train, replace=False))
+        self.indices['test'] = set(indices) - self.indices['train']
 
         # compute the STA
         self._getsta()
@@ -211,8 +212,8 @@ class NeuralEncodingModel(object):
                                       metrics.Score._fields))
 
         # evaluate metrics on train / test data
-        train = np.mean([update_results(idx) for idx in self.train_indices], axis=0)
-        test = np.mean([update_results(idx) for idx in self.test_indices], axis=0)
+        train = np.mean([update_results(idx) for idx in self.indices['train']], axis=0)
+        test = np.mean([update_results(idx) for idx in self.indices['test']], axis=0)
 
         return {'train': train, 'test': test, 'labels': metrics.Score._fields}
 
@@ -244,6 +245,24 @@ class NeuralEncodingModel(object):
 
     def plot(self):
         visualization.plot(self)
+
+    def collect(self, indices):
+        """
+        Collect firing rates from across minibatches
+        """
+        from toolz import get
+
+        # sanitize
+        if type(indices) is str and indices in ('train', 'test'):
+            inds = list(self.indices[indices])
+        elif type(indices) in (tuple, list, np.ndarray):
+            inds = list(indices)
+        else:
+            raise ValueError("Input must be an iterable or 'train' or 'test'")
+
+        # compute firing rates
+        return np.hstack([(self.rate(self.theta, d['stim'])[-1], d['rate'])
+                          for d in get(inds, self.data)])
 
 
 class LNLN(NeuralEncodingModel):
@@ -500,7 +519,7 @@ class LNLN(NeuralEncodingModel):
         theta_current = {'W': self.theta_init['W'].copy(), 'f': self.theta_init['f'].copy()}
 
         # get list of training data
-        train_data = [self.data[idx] for idx in self.train_indices]
+        train_data = [self.data[idx] for idx in self.indices['train']]
 
         # store train/test results during optimization
         self.convergence = defaultdict(list)
