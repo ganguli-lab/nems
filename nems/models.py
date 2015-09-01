@@ -698,7 +698,7 @@ class LNLN(NeuralEncodingModel):
         u = np.tensordot(theta['W'], stim, ([1, 2], [0, 2]))  # dims: (K x M)
 
         # evaluate input at tent basis functions
-        z, zgrad, zhess = self.tents(u, hess=False)
+        z, zgrad, zhess = self.tents(u, hess=hess)
 
         # compute log(rate) and the firing rate
         r, drdz, dr2dz2 = self.final_nonlin_function(np.tensordot(theta['f'], z, ([0, 1], [0, 2])))  # dims: (M)
