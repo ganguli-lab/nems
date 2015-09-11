@@ -62,7 +62,7 @@ class Nonlinearity(object):
         Phi = self(x)[0]
         return np.linalg.lstsq(Phi, y)[0]
 
-    def plot(self, weights, ax=None, num_samples=1000):
+    def plot(self, weights, ax=None, num_samples=1000, color='black'):
         """
         Plot the nonlinearity
         """
@@ -73,7 +73,7 @@ class Nonlinearity(object):
         if ax is None:
             ax = plt.gca()
 
-        ax.plot(x,y,'-')
+        ax.plot(x,y,'-',color=color)
         ax.set_xlabel('x', fontsize=22)
         ax.set_ylabel('f(x)', fontsize=22)
 
@@ -94,7 +94,7 @@ class Nonlinearity(object):
         z = np.concatenate((z, np.ones(z.shape[:-1] + (1,))), axis=-1)
         zgrad = np.concatenate((zgrad, np.zeros(z.shape[:-1] + (1,))), axis=-1)
 
-        if zhess:
+        if zhess is not None:
             zhess = np.concatenate((zhess, np.zeros(zhess.shape[:-1] + (1,))), axis=-1)
 
         return z, zgrad, zhess
@@ -103,7 +103,7 @@ class Nonlinearity(object):
 class Gaussian(Nonlinearity):
 
     def __init__(self, tent_span, num_tents, sigmasq=0.2):
-        super().__init__(tent_span, num_tents)
+        super(Gaussian, self).__init__(tent_span, num_tents)
         self.sigmasq = sigmasq
 
     def __call__(self, x, hess=False):
@@ -128,13 +128,13 @@ class Gaussian(Nonlinearity):
         zgrad = PhiGrad.reshape(x.shape + (-1,))
         zhess = PhiGrad2.reshape(x.shape + (-1,)) if hess else None
 
-        return super().append_bias(z, zgrad, zhess)
+        return super(Gaussian, self).append_bias(z, zgrad, zhess)
 
 
 class Linear(Nonlinearity):
 
     def __init__(self, tent_span, num_tents):
-        super().__init__(tent_span, num_tents)
+        super(Linear, self).__init__(tent_span, num_tents)
 
     def __eval__(self, x, hess=False):
         """
@@ -174,13 +174,13 @@ class Linear(Nonlinearity):
         zgrad = PhiGrad.reshape(x.shape + (-1,))
         zhess = np.zeros_like(zgrad) if hess else None
 
-        return super().append_bias(z, zgrad, zhess)
+        return super(Linear, self).append_bias(z, zgrad, zhess)
 
 
 class Ispline(Nonlinearity):
 
     def __init__(self, tent_span, num_tents, order=3):
-        super().__init__(tent_span, num_tents)
+        super(Ispline, self).__init__(tent_span, num_tents)
         self.order = order
 
         # overwrite centers
@@ -202,7 +202,7 @@ class Ispline(Nonlinearity):
         zgrad = PhiGrad.reshape(x.shape + (-1,))
         zhess = None
 
-        return super().append_bias(z, zgrad, zhess)
+        return super(Ispline, self).append_bias(z, zgrad, zhess)
 
 
 def make_rcos_basis(tau, numBases, bias=0.2):
