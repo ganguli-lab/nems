@@ -34,6 +34,7 @@ from collections import defaultdict
 import numpy as np
 import tableprint
 from proxalgs import Optimizer, operators
+from sklearn.cross_validation import KFold
 
 # relative imports
 from . import utilities
@@ -245,6 +246,21 @@ class NeuralEncodingModel(object):
 
     def plot(self):
         visualization.plot(self)
+
+    def kfold(self, nfolds, *args, **kwargs):
+        kf = KFold(len(self.data), n_folds=nfolds, shuffle=True)
+        results = list()
+        for train_indices, test_indices in kf:
+            self.indices['train'] = train_indices
+            self.indices['test'] = test_indices
+            self.fit(*args, **kwargs)
+            results.append(self.test(self.theta))
+            print('-'*20)
+            print('Finished k-fold ({} total)'.format(nfolds))
+            print('-'*20)
+
+        return results
+
 
     def collect(self, indices):
         """
@@ -483,6 +499,23 @@ class LNLN(NeuralEncodingModel):
             obj_gradient = None
 
         return obj_value, obj_gradient
+
+    def noisy_oracle(self, key, theta_other):
+
+        if key is 'W':
+            def f_df_wrapper(theta):
+                ind = np.random.choice(self.indices['train'], size=1)
+                return self.f_df(theta, theta_other, self.data[ind], param_gradient='W')
+
+        elif key is 'f':
+            def f_df_wrapper(theta):
+                ind = np.random.choice(self.indices['train'], size=1)
+                return self.f_df(theta_other, theta, self.data[ind], param_gradient='f')
+
+        else:
+            raise ValueError('Incorrect key ' + key)
+
+        return f_df_wrapper
 
     def fit(self, num_alt=2, max_iter=20, num_likelihood_steps=50, disp=2, check_grad=None, callback=None):
         """
