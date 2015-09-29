@@ -35,6 +35,8 @@ import numpy as np
 import tableprint
 from proxalgs import Optimizer, operators
 from sklearn.cross_validation import KFold
+from descent import minibatchify
+
 
 # relative imports
 from . import utilities
@@ -49,6 +51,7 @@ __all__ = ['NeuralEncodingModel', 'LNLN']
 
 
 class NeuralEncodingModel(object):
+
     """
     Neural enoding model super class
 
@@ -67,20 +70,26 @@ class NeuralEncodingModel(object):
         self.theta = None
         self.num_samples = spkcounts.size
         self.tau = filter_dims[-1]
-        self.tau_filt = self.tau if temporal_basis is None else temporal_basis.shape[1]
+        self.tau_filt = self.tau if temporal_basis is None else temporal_basis.shape[
+            1]
         self.filter_dims = filter_dims[:-1] + (self.tau_filt,)
         self.stim_dim = np.prod(self.filter_dims[:-1])
 
-        # the length of the filter must be smaller than the length of the experiment
+        # the length of the filter must be smaller than the length of the
+        # experiment
         assert self.tau <= self.num_samples, 'The temporal filter length must be less than the experiment length.'
 
-        # filter dimensions must be (n1 x n2 x tau), while the stimulus dimensions should be (n1*n2 x t)
-        assert stimulus.shape[0] == self.stim_dim, 'Stimulus size does not match up with filter dimensions'
+        # filter dimensions must be (n1 x n2 x tau), while the stimulus
+        # dimensions should be (n1*n2 x t)
+        assert stimulus.shape[
+            0] == self.stim_dim, 'Stimulus size does not match up with filter dimensions'
 
         # length of the given firing rate must match the length of the stimulus
-        assert stimulus.shape[-1] == spkcounts.size, 'Stimulus length (in time) must equal the length of the given rate'
+        assert stimulus.shape[-
+                              1] == spkcounts.size, 'Stimulus length (in time) must equal the length of the given rate'
 
-        # trim the initial portion of the rate (the time shorter than the filter length)
+        # trim the initial portion of the rate (the time shorter than the
+        # filter length)
         rate_trim = spkcounts[self.tau:]
 
         # split data into minibatches
@@ -93,17 +102,23 @@ class NeuralEncodingModel(object):
         else:
             num_minibatches = int(self.num_samples / minibatch_size)
 
-        # slice the z-scored stimulus every tau samples, for easier dot products
-        slices = utilities.rolling_window((stimulus - np.mean(stimulus)) / np.std(stimulus), self.tau)
+        # slice the z-scored stimulus every tau samples, for easier dot
+        # products
+        slices = utilities.rolling_window(
+            (stimulus - np.mean(stimulus)) / np.std(stimulus),
+            self.tau)
 
         # store stimulus and rate data for each minibatch in a list
         self.data = list()
         for idx in range(num_minibatches):
 
             # indices for this minibatch
-            minibatch_indices = slice(idx * minibatch_size, (idx + 1) * minibatch_size)
+            minibatch_indices = slice(
+                idx * minibatch_size,
+                (idx + 1) * minibatch_size)
 
-            # z-score the stimulus and save each minibatch, along with the rate and spikes if given
+            # z-score the stimulus and save each minibatch, along with the rate
+            # and spikes if given
             if temporal_basis is None:
                 self.data.append({
                     'stim': slices[:, minibatch_indices, :],
@@ -124,7 +139,11 @@ class NeuralEncodingModel(object):
         num_train = int(np.round(frac_train * num_minibatches))
         indices = np.arange(num_minibatches)
         self.indices = dict()
-        self.indices['train'] = set(np.random.choice(indices, size=num_train, replace=False))
+        self.indices['train'] = set(
+            np.random.choice(
+                indices,
+                size=num_train,
+                replace=False))
         self.indices['test'] = set(indices) - self.indices['train']
 
         # compute the STA
@@ -139,7 +158,14 @@ class NeuralEncodingModel(object):
 
         """
         num_samples = float(self.data[0]['rate'].size)
-        stas = [np.tensordot(d['stim'], d['rate'], axes=([1], [0])) / num_samples for d in self.data]
+        stas = [
+            np.tensordot(
+                d['stim'],
+                d['rate'],
+                axes=(
+                    [1],
+                    [0])) /
+            num_samples for d in self.data]
         self.sta = np.mean(stas, axis=0).reshape(self.filter_dims)
 
     def add_regularizer(self, theta_key, proxfun, **kwargs):
@@ -161,17 +187,26 @@ class NeuralEncodingModel(object):
 
         # ensure regularizers have been initialized
         assert "regularizers" in self.__dict__, "Regularizers dictionary has not been initialized!"
-        assert theta_key in self.regularizers, "Key '" + theta_key + "' not found in self.regularizers!"
+        assert theta_key in self.regularizers, "Key '" + \
+            theta_key + "' not found in self.regularizers!"
 
-        # build a wrapper function that applies the desired proximal operator to each element of the parameter array
+        # build a wrapper function that applies the desired proximal operator
+        # to each element of the parameter array
         def wrapper(theta, rho, **kwargs):
 
-            # creating a copy of the parameters isolates them from any modifications applied by proxfun
+            # creating a copy of the parameters isolates them from any
+            # modifications applied by proxfun
             theta_new = copy.deepcopy(theta)
 
-            # apply the proximal operator to each element in the parameter array
+            # apply the proximal operator to each element in the parameter
+            # array
             for idx, param in enumerate(theta):
-                theta_new[idx] = getattr(operators, proxfun)(param.copy(), float(rho), **kwargs)
+                theta_new[idx] = getattr(
+                    operators,
+                    proxfun)(
+                    param.copy(),
+                    float(rho),
+                    **kwargs)
 
             return theta_new
 
@@ -209,12 +244,17 @@ class NeuralEncodingModel(object):
         def update_results(idx):
             d = self.data[idx]
             rhat = self.rate(theta, d['stim'])[-1]
-            return metrics.Score(*map(lambda k: metrics.__dict__[k](d['rate'], rhat),
-                                      metrics.Score._fields))
+            return metrics.Score(
+                *
+                map(lambda k: metrics.__dict__[k](d['rate'], rhat),
+                    metrics.Score._fields))
 
         # evaluate metrics on train / test data
-        train = np.mean([update_results(idx) for idx in self.indices['train']], axis=0)
-        test = np.mean([update_results(idx) for idx in self.indices['test']], axis=0)
+        train = np.mean(
+            [update_results(idx)
+             for idx in self.indices['train']], axis=0)
+        test = np.mean([update_results(idx)
+                       for idx in self.indices['test']], axis=0)
 
         return {'train': train, 'test': test, 'labels': metrics.Score._fields}
 
@@ -240,7 +280,9 @@ class NeuralEncodingModel(object):
         headers = ['Set'] + list(map(str.upper, metrics.Score._fields))
 
         # print the table
-        tableprint.table(data, headers, {'column_width': 10, 'precision': '3g'})
+        tableprint.table(
+            data, headers, {
+                'column_width': 10, 'format_spec': '3g'})
 
         return results
 
@@ -261,7 +303,6 @@ class NeuralEncodingModel(object):
 
         return results
 
-
     def collect(self, indices):
         """
         Collect firing rates from across minibatches
@@ -269,7 +310,7 @@ class NeuralEncodingModel(object):
         from toolz import get
 
         # sanitize
-        if type(indices) is str and indices in ('train', 'test'):
+        if isinstance(indices, str) and indices in ('train', 'test'):
             inds = list(self.indices[indices])
         elif type(indices) in (tuple, list, np.ndarray):
             inds = list(indices)
@@ -282,6 +323,7 @@ class NeuralEncodingModel(object):
 
 
 class LNLN(NeuralEncodingModel):
+
     def __init__(self, stim, spkcounts, filter_dims, minibatch_size=None,
                  frac_train=0.8, num_subunits=1, num_tents=10, sigmasq=0.5,
                  final_nonlinearity='softrect', num_temporal_bases=None,
@@ -357,14 +399,19 @@ class LNLN(NeuralEncodingModel):
                                          filter_dims, minibatch_size,
                                          frac_train=frac_train)
         else:
-            assert num_temporal_bases < filter_dims[-1], "Number of temporal basis functions must be less than the number of temporal dimensions"
+            assert num_temporal_bases < filter_dims[
+                -1], "Number of temporal basis functions must be less than the number of temporal dimensions"
 
             # defaults
             tmax = kwargs['tmax'] if 'tmax' in kwargs else 0.5
-            bias = kwargs['temporal_bias'] if 'temporal_bias' in kwargs else 0.2
+            bias = kwargs[
+                'temporal_bias'] if 'temporal_bias' in kwargs else 0.2
 
             # make raised cosine basis
-            self.temporal_basis = np.flipud(tentbasis.make_rcos_basis(np.linspace(0, tmax, filter_dims[-1]), num_temporal_bases, bias=bias)[1])
+            self.temporal_basis = np.flipud(
+                tentbasis.make_rcos_basis
+                (np.linspace(0, tmax, filter_dims[-1]), num_temporal_bases,
+                 bias=bias)[1])
 
             # build the reduced model
             NeuralEncodingModel.__init__(self, 'lnln', stim, spkcounts,
@@ -373,7 +420,8 @@ class LNLN(NeuralEncodingModel):
                                          temporal_basis=self.temporal_basis)
 
         # default # of subunits
-        self.num_subunits = kwargs['W'].shape[0] if 'W' in kwargs else num_subunits
+        self.num_subunits = kwargs['W'].shape[
+            0] if 'W' in kwargs else num_subunits
 
         # initialize tent basis functions
         tent_span = (-5, 5)          # suitable for z-scored input
@@ -381,8 +429,10 @@ class LNLN(NeuralEncodingModel):
 
         # initialize parameter dictionary
         self.theta_init = dict()
-        self.theta_init['W'] = np.zeros((self.num_subunits,) + (self.stim_dim, self.tau_filt))
-        self.theta_init['f'] = np.zeros((self.num_subunits, self.tents.num_params))
+        self.theta_init['W'] = np.zeros(
+            (self.num_subunits,) + (self.stim_dim, self.tau_filt))
+        self.theta_init['f'] = np.zeros(
+            (self.num_subunits, self.tents.num_params))
 
         # initialize filter parameters
         if 'W' in kwargs:
@@ -395,11 +445,14 @@ class LNLN(NeuralEncodingModel):
 
                 elif kwargs['W'].shape[-1] < self.tau:
                     temp = kwargs['W'].shape[-1]
-                    kwargs['W'] = kwargs['W'].dot(self.temporal_basis[:temp, :])
+                    kwargs['W'] = kwargs['W'].dot(
+                        self.temporal_basis[
+                            :temp,
+                            :])
 
             # ensure dimensions are consistent
-            assert self.theta_init['W'].shape == kwargs['W'].shape, "Shape of the filters (`W` keyword argument) " \
-                                                                    "are inconsistent with the given filter dimensions."
+            assert self.theta_init['W'].shape == kwargs[
+                'W'].shape, "Shape of the filters (`W` keyword argument) " "are inconsistent with the given filter dimensions."
 
             # normalize each of the given filters
             for idx, w in enumerate(kwargs['W']):
@@ -410,11 +463,16 @@ class LNLN(NeuralEncodingModel):
             # multiple subunits: random initialization
             if self.num_subunits > 1:
                 for idx in range(self.num_subunits):
-                    self.theta_init['W'][idx] = utilities.nrm(0.1 * np.random.randn(self.stim_dim, self.tau_filt))
+                    self.theta_init['W'][idx] = utilities.nrm(
+                        0.1 *
+                        np.random.randn(
+                            self.stim_dim,
+                            self.tau_filt))
 
             # single subunit: initialize with the STA
             else:
-                self.theta_init['W'][0] = utilities.nrm(self.sta).reshape(-1, self.sta.shape[-1])
+                self.theta_init['W'][0] = utilities.nrm(
+                    self.sta).reshape(-1, self.sta.shape[-1])
 
         # initialize nonlinearity parameters
         if 'f' in kwargs:
@@ -432,13 +490,17 @@ class LNLN(NeuralEncodingModel):
             for idx in range(self.num_subunits):
                 ts = self.tents.tent_span
                 nonlin_init = np.linspace(ts[0], ts[1], 1000)
-                self.theta_init['f'][idx] = self.tents.fit(nonlin_init, nonlin_init)
+                self.theta_init['f'][idx] = self.tents.fit(
+                    nonlin_init,
+                    nonlin_init)
 
         # initialize regularizers
         self.regularizers = {'W': list(), 'f': list()}
 
         # final nonlinearity
-        self.final_nonlin_function = getattr(nonlinearities, final_nonlinearity)
+        self.final_nonlin_function = getattr(
+            nonlinearities,
+            final_nonlinearity)
 
     def f_df(self, W, f, data, param_gradient=None):
         """
@@ -478,7 +540,8 @@ class LNLN(NeuralEncodingModel):
         m = (data['rate'].size - tau + 1)
 
         # estimate firing rate and get model response
-        u, z, zgrad, zhess, drdz, dr2dz2, r = self.rate({'W': W, 'f': f}, data['stim'])
+        u, z, zgrad, zhess, drdz, dr2dz2, r = self.rate(
+            {'W': W, 'f': f}, data['stim'])
 
         # objective in bits (poisson log-likelihood)
         obj_value = np.mean(r - data['rate'] * np.log(r))
@@ -488,9 +551,13 @@ class LNLN(NeuralEncodingModel):
 
         # compute gradient
         if param_gradient == 'W':
-            nonlin_proj = np.sum(f[:, np.newaxis, :] * zgrad, axis=2)  # dims: (K, M)
-            weighted_proj = grad_factor[np.newaxis, :] * nonlin_proj  # dims: (K, M)
-            obj_gradient = np.tensordot(weighted_proj, data['stim'], ([1], [1])) / float(m)
+            nonlin_proj = np.sum(
+                f[:, np.newaxis, :] * zgrad, axis=2)   # dims: (K, M)
+            weighted_proj = grad_factor[
+                np.newaxis,
+                :] * nonlin_proj  # dims: (K, M)
+            obj_gradient = np.tensordot(
+                weighted_proj, data['stim'], ([1], [1])) / float(m)
 
         elif param_gradient == 'f':
             obj_gradient = np.tensordot(grad_factor, z, ([0], [1])) / float(m)
@@ -505,19 +572,33 @@ class LNLN(NeuralEncodingModel):
         if key is 'W':
             def f_df_wrapper(theta):
                 ind = np.random.choice(self.indices['train'], size=1)
-                return self.f_df(theta, theta_other, self.data[ind], param_gradient='W')
+                return self.f_df(
+                    theta,
+                    theta_other,
+                    self.data[ind],
+                    param_gradient='W')
 
         elif key is 'f':
             def f_df_wrapper(theta):
                 ind = np.random.choice(self.indices['train'], size=1)
-                return self.f_df(theta_other, theta, self.data[ind], param_gradient='f')
+                return self.f_df(
+                    theta_other,
+                    theta,
+                    self.data[ind],
+                    param_gradient='f')
 
         else:
             raise ValueError('Incorrect key ' + key)
 
         return f_df_wrapper
 
-    def fit(self, num_alt=2, max_iter=20, num_likelihood_steps=50, disp=2, check_grad=None, callback=None):
+    def fit(self,
+            num_alt=2,
+            max_iter=20,
+            num_likelihood_steps=50,
+            disp=2,
+            check_grad=None,
+            callback=None):
         """
         Runs an optimization algorithm to learn the parameters of the model given training data and regularizers
 
@@ -549,13 +630,21 @@ class LNLN(NeuralEncodingModel):
         """
 
         # grab the initial parameters
-        theta_current = {'W': self.theta_init['W'].copy(), 'f': self.theta_init['f'].copy()}
+        theta_current = {
+            'W': self.theta_init['W'].copy(),
+            'f': self.theta_init['f'].copy()}
 
         # get list of training data
         train_data = [self.data[idx] for idx in self.indices['train']]
 
+        # data generator
+        def datagen():
+            while True:
+                yield np.random.choice(train_data, 1)[0]
+
         # store train/test results during optimization
         self.convergence = defaultdict(list)
+
         def update_results():
 
             if disp > 0:
@@ -563,66 +652,99 @@ class LNLN(NeuralEncodingModel):
                 for k in ('train', 'test'):
                     self.convergence[k].append(tmp_results[k])
 
-        # runs the optimization procedure for one set of parameters (a single leg of the alternating minimization)
+        # runs the optimization procedure for one set of parameters (a single
+        # leg of the alternating minimization)
         def optimize_param(f_df_wrapper, param_key, check_grad, cur_iter):
 
             # initialize the SFO instance
-            loglikelihood_optimizer = SFO(f_df_wrapper, theta_current[param_key], train_data, display=0)
+            loglikelihood_optimizer = SFO(
+                f_df_wrapper,
+                theta_current[param_key],
+                train_data,
+                display=0)
 
             # check gradient
             if check_grad == param_key:
                 loglikelihood_optimizer.check_grad()
 
             # initialize the optimizer object
-            opt = Optimizer('sfo', optimizer=loglikelihood_optimizer, num_steps=num_likelihood_steps)
+            opt = Optimizer(
+                'sfo',
+                optimizer=loglikelihood_optimizer,
+                num_steps=num_likelihood_steps)
+            #print('using descent!')
+            #f_df = minibatchify(datagen())(f_df_wrapper)
+            #opt = Optimizer(operators.descent(f_df=f_df, eta=1e-2, maxiter=10))
 
             # add regularization terms
             [opt.add_regularizer(reg) for reg in self.regularizers[param_key]]
 
             # run the optimization procedure
-            opt.minimize(theta_current[param_key], max_iter=max_iter, disp=disp, callback=callback)
+            opt.minimize(
+                theta_current[param_key],
+                max_iter=max_iter,
+                disp=disp,
+                callback=callback)
 
             # return parameters and optimization metadata
             return opt.theta
 
         # print results based on the initial parameters
         print('\n')
-        tableprint.table([], ['Initial parameters'], {'column_width': 20, 'line_char': '='})
+        tableprint.table(
+            [], ['Initial parameters'], {
+                'column_width': 20, 'line_char': '='})
 
         # print results and store
         update_results()
 
-        # alternating optimization: switch between optimizing nonlinearities, and optimizing filters
+        # alternating optimization: switch between optimizing nonlinearities,
+        # and optimizing filters
         for alt_iter in range(num_alt):
 
             # Fit filters
             print('\n')
-            tableprint.table([], ['Fitting filters'], {'column_width': 20, 'line_char': '='})
+            tableprint.table(
+                [], ['Fitting filters'], {
+                    'column_width': 20, 'line_char': '='})
 
             # wrapper for the objective and gradient
             def f_df_wrapper(W, d):
                 return self.f_df(W, theta_current['f'], d, param_gradient='W')
 
             # run the optimization procedure for this parameter
-            Wk = optimize_param(f_df_wrapper, 'W', check_grad, alt_iter + 0.5).copy()
+            Wk = optimize_param(
+                f_df_wrapper,
+                'W',
+                check_grad,
+                alt_iter +
+                0.5).copy()
 
             # normalize filters
             for filter_index in range(Wk.shape[0]):
-                theta_current['W'][filter_index] = utilities.nrm(Wk[filter_index])
+                theta_current['W'][filter_index] = utilities.nrm(
+                    Wk[filter_index])
 
             # print and save test results
             update_results()
 
             # Fit nonlinearity
             print('\n')
-            tableprint.table([], ['Fitting nonlinearity'], {'column_width': 20, 'line_char': '='})
+            tableprint.table(
+                [], ['Fitting nonlinearity'], {
+                    'column_width': 20, 'line_char': '='})
 
             # wrapper for the objective and gradient
             def f_df_wrapper(f, d):
                 return self.f_df(theta_current['W'], f, d, param_gradient='f')
 
             # run the optimization procedure for this parameter
-            theta_current['f'] = optimize_param(f_df_wrapper, 'f', check_grad, alt_iter + 1).copy()
+            theta_current['f'] = optimize_param(
+                f_df_wrapper,
+                'f',
+                check_grad,
+                alt_iter +
+                1).copy()
 
             # print and save test results
             update_results()
@@ -655,7 +777,8 @@ class LNLN(NeuralEncodingModel):
         r = self.data[data_index]['rate']
 
         # model
-        u, z, zgrad, zhess, drdz, dr2dz2, rhat = self.rate(theta, self.data[data_index]['stim'], hess=True)
+        u, z, zgrad, zhess, drdz, dr2dz2, rhat = self.rate(
+            theta, self.data[data_index]['stim'], hess=True)
 
         # store the full Hessian
         N = np.prod(theta['W'].shape[1:])       # filter dimension
@@ -669,13 +792,30 @@ class LNLN(NeuralEncodingModel):
         hess_factor = r / (rhat**2)
 
         # nonlinearity projection
-        zproj = np.sum(theta['f'][:, np.newaxis, :] * zgrad, axis=2)            # M by T
-        zproj2 = np.sum(theta['f'][:, np.newaxis, :] * zhess, axis=2)           # M by T
+        zproj = np.sum(
+            theta['f'][
+                :,
+                np.newaxis,
+                :] *
+            zgrad,
+            axis=2)            # M by T
+        zproj2 = np.sum(
+            theta['f'][
+                :,
+                np.newaxis,
+                :] * zhess,
+            axis=2)           # M by T
 
         # vectorized data
-        x_vec = np.rollaxis(self.data[data_index]['stim'],-1).reshape(N,T)      # N x T
-        z_vec = np.rollaxis(z, -1).reshape(M*P, T)                              # M*P x T
-        scale_factor = np.diag(grad_factor * dr2dz2 + hess_factor * drdz**2)    # diagonal(T)
+        x_vec = np.rollaxis(
+            self.data[data_index]['stim'], -1).reshape(N, T)      # N x T
+        # M*P x T
+        z_vec = np.rollaxis(z, -1).reshape(M*P, T)
+        scale_factor = np.diag(
+            grad_factor *
+            dr2dz2 +
+            hess_factor *
+            drdz**2)    # diagonal(T)
 
         # nonlinearity - nonlinearity portion
         H[-(M*P):, -(M*P):] = z_vec.dot(scale_factor.dot(z_vec.T))
@@ -699,11 +839,20 @@ class LNLN(NeuralEncodingModel):
                 zgrad_j2 = np.diag(zproj[j2, :])
 
                 # update this portion of the Hessian
-                H[j1*N:(j1+1)*N, j2*N:(j2+1)*N] = x_vec.dot((sf_zgrad * zgrad_j2).dot(x_vec.T))
+                H[j1*N:(j1+1)*N, j2*N:(j2+1)
+                  * N] = x_vec.dot((sf_zgrad * zgrad_j2).dot(x_vec.T))
 
                 # diagonal term (for the same subunit)
                 if j1 == j2:
-                    H[j1*N:(j1+1)*N, j2*N:(j2+1)*N] += x_vec.dot(np.diag(grad_factor * drdz * zhess_j1).dot(x_vec.T))
+                    H[j1 *
+                      N:(j1 +
+                         1) *
+                        N, j2 *
+                        N:(j2 +
+                           1) *
+                        N] += x_vec.dot(np.diag(grad_factor *
+                                                drdz *
+                                                zhess_j1).dot(x_vec.T))
 
         return H / float(T)
 
@@ -734,6 +883,10 @@ class LNLN(NeuralEncodingModel):
         z, zgrad, zhess = self.tents(u, hess=hess)
 
         # compute log(rate) and the firing rate
-        r, drdz, dr2dz2 = self.final_nonlin_function(np.tensordot(theta['f'], z, ([0, 1], [0, 2])))  # dims: (M)
+        r, drdz, dr2dz2 = self.final_nonlin_function(
+            np.tensordot(
+                theta['f'], z, ([
+                    0, 1], [
+                    0, 2])))  # dims: (M)
 
         return u, z, zgrad, zhess, drdz, dr2dz2, r
