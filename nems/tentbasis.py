@@ -62,7 +62,7 @@ class Nonlinearity(object):
         Phi = self(x)[0]
         return np.linalg.lstsq(Phi, y)[0]
 
-    def plot(self, weights, ax=None, num_samples=1000):
+    def plot(self, weights, ax=None, num_samples=1000, color='black'):
         """
         Plot the nonlinearity
         """
@@ -73,7 +73,7 @@ class Nonlinearity(object):
         if ax is None:
             ax = plt.gca()
 
-        ax.plot(x,y,'-')
+        ax.plot(x,y,'-',color=color)
         ax.set_xlabel('x', fontsize=22)
         ax.set_ylabel('f(x)', fontsize=22)
 
@@ -94,7 +94,7 @@ class Nonlinearity(object):
         z = np.concatenate((z, np.ones(z.shape[:-1] + (1,))), axis=-1)
         zgrad = np.concatenate((zgrad, np.zeros(z.shape[:-1] + (1,))), axis=-1)
 
-        if zhess:
+        if zhess is not None:
             zhess = np.concatenate((zhess, np.zeros(zhess.shape[:-1] + (1,))), axis=-1)
 
         return z, zgrad, zhess

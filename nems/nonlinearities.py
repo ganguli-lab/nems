@@ -62,7 +62,7 @@ def softrect(x):
 
     # compute the soft rectifying nonlinearity
     x_exp = np.exp(x)
-    y = np.log(1 + x_exp)
+    y = np.log1p(x_exp)
 
     # compute the derivative
     dydx = x_exp / (1 + x_exp)
