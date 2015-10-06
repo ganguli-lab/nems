@@ -686,9 +686,7 @@ class LNLN(NeuralEncodingModel):
 
         # print results based on the initial parameters
         print('\n')
-        tableprint.table(
-            [], ['Initial parameters'], {
-                'column_width': 20, 'line_char': '='})
+        _alert('Initial parameters')
 
         # print results and store
         update_results()
@@ -699,9 +697,7 @@ class LNLN(NeuralEncodingModel):
 
             # Fit filters
             print('\n')
-            tableprint.table(
-                [], ['Fitting filters'], {
-                    'column_width': 20, 'line_char': '='})
+            _alert('Fitting filters')
 
             # wrapper for the objective and gradient
             def f_df_wrapper(W, d):
@@ -725,9 +721,7 @@ class LNLN(NeuralEncodingModel):
 
             # Fit nonlinearity
             print('\n')
-            tableprint.table(
-                [], ['Fitting nonlinearity'], {
-                    'column_width': 20, 'line_char': '='})
+            _alert('Fitting nonlinearity')
 
             # wrapper for the objective and gradient
             def f_df_wrapper(f, d):
@@ -885,3 +879,7 @@ class LNLN(NeuralEncodingModel):
                     0, 2])))  # dims: (M)
 
         return u, z, zgrad, zhess, drdz, dr2dz2, r
+
+
+def _alert(message):
+    tableprint.table([], [message], column_width=20, line_char='=')
