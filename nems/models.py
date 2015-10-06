@@ -280,9 +280,7 @@ class NeuralEncodingModel(object):
         headers = ['Set'] + list(map(str.upper, metrics.Score._fields))
 
         # print the table
-        tableprint.table(
-            data, headers, {
-                'column_width': 10, 'format_spec': '3g'})
+        tableprint.table(data, headers, column_width=10, format_spec='3g')
 
         return results
 
@@ -571,7 +569,7 @@ class LNLN(NeuralEncodingModel):
 
         if key is 'W':
             def f_df_wrapper(theta):
-                ind = np.random.choice(self.indices['train'], size=1)
+                ind = np.random.choice(list(self.indices['train']), size=1)
                 return self.f_df(
                     theta,
                     theta_other,
@@ -580,7 +578,7 @@ class LNLN(NeuralEncodingModel):
 
         elif key is 'f':
             def f_df_wrapper(theta):
-                ind = np.random.choice(self.indices['train'], size=1)
+                ind = np.random.choice(list(self.indices['train']), size=1)
                 return self.f_df(
                     theta_other,
                     theta,
@@ -672,9 +670,6 @@ class LNLN(NeuralEncodingModel):
                 'sfo',
                 optimizer=loglikelihood_optimizer,
                 num_steps=num_likelihood_steps)
-            #print('using descent!')
-            #f_df = minibatchify(datagen())(f_df_wrapper)
-            #opt = Optimizer(operators.descent(f_df=f_df, eta=1e-2, maxiter=10))
 
             # add regularization terms
             [opt.add_regularizer(reg) for reg in self.regularizers[param_key]]
