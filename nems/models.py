@@ -29,6 +29,7 @@ Coming soon
 import copy
 from functools import partial
 from collections import defaultdict
+from time import perf_counter
 
 # third party packages
 import numpy as np
@@ -675,11 +676,14 @@ class LNLN(NeuralEncodingModel):
             [opt.add_regularizer(reg) for reg in self.regularizers[param_key]]
 
             # run the optimization procedure
+            t0 = perf_counter()
             opt.minimize(
                 theta_current[param_key],
                 max_iter=max_iter,
                 disp=disp,
                 callback=callback)
+            t1 = perf_counter() - t0
+            print('Finished optimizing ' + param_key + '. Elapsed time: ' + tableprint.humantime(t1))
 
             # return parameters and optimization metadata
             return opt.theta
