@@ -39,7 +39,6 @@ import numpy as np
 import tableprint
 from proxalgs import Optimizer, operators
 from sklearn.cross_validation import KFold
-from descent import minibatchify
 
 # relative imports
 from . import utilities
