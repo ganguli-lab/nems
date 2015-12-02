@@ -29,7 +29,11 @@ Coming soon
 import copy
 from functools import partial
 from collections import defaultdict
-from time import perf_counter
+
+try:
+    from time import perf_counter
+except ImportError:
+    from time import time as perf_counter
 
 # third party packages
 import numpy as np
