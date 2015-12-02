@@ -9,8 +9,12 @@ import matplotlib.cm as cm
 from toolz import curry, compose
 from scipy.stats import skew
 
+import pyret.visualizations as viz
+import pyret.filtertools as ft
 
-@curry
+# from seaborn import color_palette
+
+
 def contour(W, n=3, **kwargs):
     """
     Plots a contour of a spatiotemporal filter onto the current figure
@@ -37,6 +41,29 @@ def contour(W, n=3, **kwargs):
 
     # plot the contour with the given keyword arguments
     plt.contour(W, n, **kwargs)
+
+
+def plotcells(W, n=15, alpha=0.4, palette='pastel'):
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    colors = color_palette(palette, len(W))
+
+    for wi, color in zip(W, colors):
+
+        spf = np.linalg.eigh(np.cov(wi.T.reshape(-1,n*n).T))[1][:,-1].reshape(n,n)
+        tx = np.arange(n)
+        ell = ft.fit_ellipse(tx,tx,spf)
+        viz.ellipse(ell, ax=ax)
+        ell.set_clip_box(ax.bbox)
+        ell.set_alpha(alpha)
+        ell.set_facecolor(color)
+
+    ax.set_xlim(0,n)
+    ax.set_ylim(0,n)
+
+    return ax
 
 
 @curry

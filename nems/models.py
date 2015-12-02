@@ -40,8 +40,6 @@ import numpy as np
 import tableprint
 from proxalgs import Optimizer, operators
 from sklearn.cross_validation import KFold
-from descent import minibatchify
-
 
 # relative imports
 from . import utilities
@@ -699,55 +697,61 @@ class LNLN(NeuralEncodingModel):
         # print results and store
         update_results()
 
-        # alternating optimization: switch between optimizing nonlinearities,
-        # and optimizing filters
-        for alt_iter in range(num_alt):
+        try:
 
-            # Fit filters
-            print('\n')
-            _alert('Fitting filters')
+            # alternating optimization: switch between optimizing nonlinearities,
+            # and optimizing filters
+            for alt_iter in range(num_alt):
 
-            # wrapper for the objective and gradient
-            def f_df_wrapper(W, d):
-                return self.f_df(W, theta_current['f'], d, param_gradient='W')
+                # Fit filters
+                print('\n')
+                _alert('Fitting filters')
 
-            # run the optimization procedure for this parameter
-            Wk = optimize_param(
-                f_df_wrapper,
-                'W',
-                check_grad,
-                alt_iter +
-                0.5).copy()
+                # wrapper for the objective and gradient
+                def f_df_wrapper(W, d):
+                    return self.f_df(W, theta_current['f'], d, param_gradient='W')
 
-            # normalize filters
-            for filter_index in range(Wk.shape[0]):
-                theta_current['W'][filter_index] = utilities.nrm(
-                    Wk[filter_index])
+                # run the optimization procedure for this parameter
+                Wk = optimize_param(
+                    f_df_wrapper,
+                    'W',
+                    check_grad,
+                    alt_iter +
+                    0.5).copy()
 
-            # print and save test results
-            update_results()
+                # normalize filters
+                for filter_index in range(Wk.shape[0]):
+                    theta_current['W'][filter_index] = utilities.nrm(
+                        Wk[filter_index])
 
-            # Fit nonlinearity
-            print('\n')
-            _alert('Fitting nonlinearity')
+                # print and save test results
+                update_results()
 
-            # wrapper for the objective and gradient
-            def f_df_wrapper(f, d):
-                return self.f_df(theta_current['W'], f, d, param_gradient='f')
+                # Fit nonlinearity
+                print('\n')
+                _alert('Fitting nonlinearity')
 
-            # run the optimization procedure for this parameter
-            theta_current['f'] = optimize_param(
-                f_df_wrapper,
-                'f',
-                check_grad,
-                alt_iter +
-                1).copy()
+                # wrapper for the objective and gradient
+                def f_df_wrapper(f, d):
+                    return self.f_df(theta_current['W'], f, d, param_gradient='f')
 
-            # print and save test results
-            update_results()
+                # run the optimization procedure for this parameter
+                theta_current['f'] = optimize_param(
+                    f_df_wrapper,
+                    'f',
+                    check_grad,
+                    alt_iter +
+                    1).copy()
+
+                # print and save test results
+                update_results()
+
+        except KeyboardInterrupt:
+            print('\nCleaning up... ')
 
         # store learned parameters
         self.theta = copy.deepcopy(theta_current)
+        print('Done.\n')
 
     def hessian(self, theta):
         """
