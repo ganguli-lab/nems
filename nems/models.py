@@ -247,9 +247,8 @@ class NeuralEncodingModel(object):
             d = self.data[idx]
             rhat = self.rate(theta, d['stim'])[-1]
             return metrics.Score(
-                *
-                map(lambda k: metrics.__dict__[k](d['rate'], rhat),
-                    metrics.Score._fields))
+                *map(lambda k: metrics.__dict__[k](d['rate'], rhat),
+                     metrics.Score._fields))
 
         # evaluate metrics on train / test data
         train = np.mean(
@@ -321,16 +320,28 @@ class NeuralEncodingModel(object):
         return np.hstack([(self.rate(self.theta, d['stim'])[-1], d['rate'])
                           for d in get(inds, self.data)])
 
-    def save(self, basedir='~/Dropbox/data/models/', filename=None):
+    def save(self, filename=None, basedir='~/Dropbox/data/models/'):
 
         if filename is None:
-            filename = strftime('%y.%m.%d_%H-%M-%S') + '.h5'
+            filename = strftime('%y.%m.%d_%H-%M-%S')
 
-        fullpath = os.path.join(os.path.expanduser(basedir), filename)
+        fullpath = os.path.join(os.path.expanduser(basedir), filename + '.h5')
+
+        # get test results
+        res = self.test(self.theta)
 
         with h5py.File(fullpath) as jar:
             jar['W'] = self.theta['W']
             jar['f'] = self.theta['f']
+            jar['Phi'] = self.tents(np.linspace(-5, 5, 1000))[0]
+
+            jar['train'] = np.stack(self.convergence['train'])
+            jar['test'] = np.stack(self.convergence['test'])
+
+            for ix, lbl in enumerate(res['labels']):
+                jar['train'].attrs[lbl] = res['train'][ix]
+                jar['test'].attrs[lbl] = res['test'][ix]
+
 
 class LNLN(NeuralEncodingModel):
 
