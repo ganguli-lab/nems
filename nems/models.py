@@ -23,6 +23,7 @@ Classes
 
 # standard library imports
 import os
+from time import strftime
 import copy
 from functools import partial
 from collections import defaultdict
@@ -323,11 +324,11 @@ class NeuralEncodingModel(object):
     def save(self, basedir='~/Dropbox/data/models/', filename=None):
 
         if filename is None:
-            filename = time.strftime('%y.%m.%d_%H-%M-%S') + '.h5'
+            filename = strftime('%y.%m.%d_%H-%M-%S') + '.h5'
 
         fullpath = os.path.join(os.path.expanduser(basedir), filename)
 
-        with open(h5py.File(fullpath)) as jar:
+        with h5py.File(fullpath) as jar:
             jar['W'] = self.theta['W']
             jar['f'] = self.theta['f']
 
