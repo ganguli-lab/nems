@@ -19,13 +19,10 @@ Classes
     of the first layer are learned, while the linear filter and nonlinearity of
     the second layer are fixed.
 
-References
-----------
-Coming soon
-
 """
 
 # standard library imports
+import os
 import copy
 from functools import partial
 from collections import defaultdict
@@ -36,6 +33,7 @@ except ImportError:
     from time import time as perf_counter
 
 # third party packages
+import h5py
 import numpy as np
 import tableprint
 from proxalgs import Optimizer, operators
@@ -322,6 +320,16 @@ class NeuralEncodingModel(object):
         return np.hstack([(self.rate(self.theta, d['stim'])[-1], d['rate'])
                           for d in get(inds, self.data)])
 
+    def save(self, basedir='~/Dropbox/data/models/', filename=None):
+
+        if filename is None:
+            filename = time.strftime('%y.%m.%d_%H-%M-%S') + '.h5'
+
+        fullpath = os.path.join(os.path.expanduser(basedir), filename)
+
+        with open(h5py.File(fullpath)) as jar:
+            jar['W'] = self.theta['W']
+            jar['f'] = self.theta['f']
 
 class LNLN(NeuralEncodingModel):
 
