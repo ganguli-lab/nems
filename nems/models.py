@@ -681,7 +681,6 @@ class LNLN(NeuralEncodingModel):
 
         # runs the optimization procedure for one set of parameters (a single
         # leg of the alternating minimization)
-        @q.q
         def optimize_param(f_df_wrapper, param_key, check_grad, cur_iter):
 
             # initialize the SFO instance
@@ -711,6 +710,7 @@ class LNLN(NeuralEncodingModel):
 
             # run the optimization procedure
             t0 = perf_counter()
+            q.q('Running SFO')
             opt.minimize(
                 theta_current[param_key],
                 max_iter=max_iter,
@@ -719,14 +719,11 @@ class LNLN(NeuralEncodingModel):
             t1 = perf_counter() - t0
             print('Finished optimizing ' + param_key + '. Elapsed time: ' + tableprint.humantime(t1))
 
-            # return parameters and optimization metadata
             return opt.theta
 
         # print results based on the initial parameters
         print('\n')
         _alert('Initial parameters')
-
-        # print results and store
         update_results()
 
         try:
