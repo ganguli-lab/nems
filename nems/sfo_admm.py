@@ -9,15 +9,12 @@ Attribution-Noncommercial License.
 import numpy as np
 from random import shuffle
 
-# TODO remove this import.  I believe numpy functions are always
-# called using "np." now, but keeping this in case I've missed 
-# an edge case.
-from numpy import *
-
 import time
 import warnings
 
+
 class SFO(object):
+
     def __init__(self, f_df, theta, subfunction_references, args=(), kwargs={},
         display=2, max_history_terms=10, hessian_init=1e5, init_subf=2,
         hess_max_dev = 1e8, hessian_algorithm='bfgs',
@@ -27,7 +24,7 @@ class SFO(object):
         The main Sum of Functions Optimizer (SFO) class.
 
         Parameters:
-        f_df - Returns the function value and gradient for a single subfunction 
+        f_df - Returns the function value and gradient for a single subfunction
             call.  Should have the form
                 f, dfdtheta = f_df(theta, subfunction_references[idx],
                                       *args, **kwargs)
@@ -52,8 +49,8 @@ class SFO(object):
             steps shorter than this will be made this length. Set this so as to
             prevent numerical errors when computing the difference in gradients
             before and after a step.
-        max_step_length_ratio=10 - The length of the longest allowed update step, 
-            relative to the average length of prior update steps. Takes effect 
+        max_step_length_ratio=10 - The length of the longest allowed update step,
+            relative to the average length of prior update steps. Takes effect
             after the first full pass through the data.
         hessian_init=1e5 - The initial estimate of the Hessian for the first
             init_subf subfunctions is set to this value times the identity
@@ -199,8 +196,7 @@ class SFO(object):
                 "than 25 minibatches.  See Figure 2c in SFO paper.\n"
                 "You may want to use more than the current %d minibatches.\n"%(self.N)))
 
-
-    def optimize(self, num_passes = 10, num_steps = None):
+    def optimize(self, num_passes=10, num_steps=None):
         """
         Optimize the objective function.  num_steps is the number of subfunction calls to make,
         and num_passes is the number of effective passes through all subfunctions to make.  If
@@ -209,8 +205,10 @@ class SFO(object):
         This, __init__, and check_grad are the only three functions that should be called by
         the user
         """
-        if num_steps==None:
+
+        if num_steps is None:
             num_steps = int(num_passes*self.N)
+
         for i in range(num_steps):
             if self.display > 1:
                 print("pass {0}, step {1},".format(float(self.eval_count_total)/self.N, i))
@@ -310,7 +308,7 @@ class SFO(object):
         # # (use the last location, to avoid weird interactions with rejected updates)
         # f, df_proj = self.f_df_wrapper(self.theta_prior_step, idx)
         # # replace the last function, gradient, and position with the one just
-        # # measured.  set skip_delta so that the change in gradient over 
+        # # measured.  set skip_delta so that the change in gradient over
         # # the change in subfunction is not used.
         # theta_lastpos_proj = np.dot(self.P.T, self.theta_prior_step)
         # self.update_history(idx, theta_lastpos_proj, f, df_proj, skip_delta=True)
@@ -687,11 +685,11 @@ class SFO(object):
         else:
             # if it doesn't match anything else, assume it's a scalar
             # TODO(jascha) error checking here
-            return [asarray(theta_original).reshape((1,)),]
+            return [np.asarray(theta_original).reshape((1,)),]
     def theta_list_to_original_recurse(self, theta_list, theta_original):
         """
         Recursively convert from a list of numpy arrays into the original parameter format.
-        
+
         Use theta_list_to_original() instead of calling this function directly.
         """
         if isinstance(theta_original, list) or isinstance(theta_original, tuple):
@@ -708,7 +706,7 @@ class SFO(object):
                 else:
                     # if it doesn't match anything else, assume it's a scalar
                     theta_new.append(theta_list[0][0])
-                    theta_list = theta_list[1:]                    
+                    theta_list = theta_list[1:]
             return theta_new, theta_list
         elif isinstance(theta_original, dict):
             theta_dict = dict()
@@ -859,7 +857,7 @@ class SFO(object):
             self.cyclic_subfunction_index %= np.sum(self.active)
             return indx
 
-        throw("unknown subfunction choice method")
+        np.throw("unknown subfunction choice method")
 
     def handle_step_failure(self, f, df_proj, indx):
         """
@@ -982,7 +980,7 @@ class SFO(object):
         p_df_sum = np.sum(ldfs * np.dot(full_H_inv, ldfs)) / num_active / (num_active - 1)
         # if the standard errror in the estimated gradient is the same order of magnitude as the gradient,
         # we want to increase the size of the active set
-        increase_desirable = p_df_sum >= p_df_avg*self.max_gradient_noise 
+        increase_desirable = p_df_sum >= p_df_avg*self.max_gradient_noise
         # increase the active set on step failure
         increase_desirable = increase_desirable or step_failure
         # increase the active set if we've done a full pass without updating it
@@ -1038,7 +1036,7 @@ class SFO(object):
         ## update this subfunction's Hessian estimate
         self.update_hessian(indx)
         # the new contribution from this subfunction to the total approximate hessian
-        H_new = np.real(np.dot(self.b[:,:,indx], self.b[:,:,indx].T))   
+        H_new = np.real(np.dot(self.b[:,:,indx], self.b[:,:,indx].T))
         # update total Hessian using this subfunction's updated contribution
         self.full_H += H_new - H_pre_update
 
