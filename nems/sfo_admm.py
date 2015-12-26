@@ -11,6 +11,7 @@ from random import shuffle
 
 import time
 import warnings
+import q
 
 
 class SFO(object):
@@ -1020,10 +1021,14 @@ class SFO(object):
 
         # evaluate subfunction value and gradient at new position
         f, df_proj = self.f_df_wrapper(self.theta, indx)
+        q(f)
 
         # check for a failed update step, and adjust f, df, and self.theta
         # as appropriate if one occurs.
         step_failure, f, df_proj = self.handle_step_failure(f, df_proj, indx)
+        if step_failure:
+            q(step_failure)
+            import pdb; pdb.set_trace()
 
         # add the change in theta and the change in gradient to the history for this subfunction
         self.update_history(indx, self.theta_proj, f, df_proj)
