@@ -48,6 +48,9 @@ from . import visualization
 from . import tentbasis
 from .sfo_admm import SFO
 
+# debugging
+import q
+
 # exports
 __all__ = ['NeuralEncodingModel', 'LNLN']
 
@@ -613,6 +616,7 @@ class LNLN(NeuralEncodingModel):
 
         return f_df_wrapper
 
+    @q.q
     def fit(self,
             num_alt=2,
             max_iter=20,
@@ -620,6 +624,7 @@ class LNLN(NeuralEncodingModel):
             disp=2,
             check_grad=None,
             callback=None):
+
         """
         Runs an optimization algorithm to learn the parameters of the model given training data and regularizers
 
@@ -653,7 +658,8 @@ class LNLN(NeuralEncodingModel):
         # grab the initial parameters
         theta_current = {
             'W': self.theta_init['W'].copy(),
-            'f': self.theta_init['f'].copy()}
+            'f': self.theta_init['f'].copy()
+        }
 
         # get list of training data
         train_data = [self.data[idx] for idx in self.indices['train']]
@@ -675,6 +681,7 @@ class LNLN(NeuralEncodingModel):
 
         # runs the optimization procedure for one set of parameters (a single
         # leg of the alternating minimization)
+        @q.q
         def optimize_param(f_df_wrapper, param_key, check_grad, cur_iter):
 
             # initialize the SFO instance
@@ -687,6 +694,11 @@ class LNLN(NeuralEncodingModel):
             # check gradient
             if check_grad == param_key:
                 loglikelihood_optimizer.check_grad()
+
+            # debugging callback
+            def cb(theta, metadata):
+                q(np.linalg.norm(theta))
+                q(metadata)
 
             # initialize the optimizer object
             opt = Optimizer(
@@ -703,7 +715,7 @@ class LNLN(NeuralEncodingModel):
                 theta_current[param_key],
                 max_iter=max_iter,
                 disp=disp,
-                callback=callback)
+                callback=cb)
             t1 = perf_counter() - t0
             print('Finished optimizing ' + param_key + '. Elapsed time: ' + tableprint.humantime(t1))
 
