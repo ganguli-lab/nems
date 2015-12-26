@@ -75,23 +75,23 @@ class NeuralEncodingModel(object):
         self.theta = None
         self.num_samples = spkcounts.size
         self.tau = filter_dims[-1]
-        self.tau_filt = self.tau if temporal_basis is None else temporal_basis.shape[
-            1]
+        self.tau_filt = self.tau if temporal_basis is None else temporal_basis.shape[1]
         self.filter_dims = filter_dims[:-1] + (self.tau_filt,)
         self.stim_dim = np.prod(self.filter_dims[:-1])
 
         # the length of the filter must be smaller than the length of the
         # experiment
-        assert self.tau <= self.num_samples, 'The temporal filter length must be less than the experiment length.'
+        assert self.tau <= self.num_samples, \
+            'The temporal filter length must be less than the experiment length.'
 
         # filter dimensions must be (n1 x n2 x tau), while the stimulus
         # dimensions should be (n1*n2 x t)
-        assert stimulus.shape[
-            0] == self.stim_dim, 'Stimulus size does not match up with filter dimensions'
+        assert stimulus.shape[0] == self.stim_dim, \
+            'Stimulus size does not match up with filter dimensions'
 
         # length of the given firing rate must match the length of the stimulus
-        assert stimulus.shape[-
-                              1] == spkcounts.size, 'Stimulus length (in time) must equal the length of the given rate'
+        assert stimulus.shape[-1] == spkcounts.size, \
+            'Stimulus length (in time) must equal the length of the given rate'
 
         # trim the initial portion of the rate (the time shorter than the
         # filter length)
@@ -589,6 +589,9 @@ class LNLN(NeuralEncodingModel):
         else:
             obj_gradient = None
 
+        q(obj_value)
+        q(np.linalg.norm(obj_gradient))
+
         return obj_value, obj_gradient
 
     def noisy_oracle(self, key, theta_other):
@@ -694,16 +697,16 @@ class LNLN(NeuralEncodingModel):
             if check_grad == param_key:
                 loglikelihood_optimizer.check_grad()
 
-            # debugging callback
-            def cb(theta, metadata):
-                q(np.linalg.norm(theta))
-                q(metadata)
-
             # initialize the optimizer object
             opt = Optimizer(
                 'sfo',
                 optimizer=loglikelihood_optimizer,
                 num_steps=num_likelihood_steps)
+
+            # debugging callback
+            def cb(theta, metadata):
+                q(np.linalg.norm(theta))
+                q(metadata)
 
             # add regularization terms
             [opt.add_regularizer(reg) for reg in self.regularizers[param_key]]
