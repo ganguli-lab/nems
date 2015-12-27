@@ -11,6 +11,8 @@ from random import shuffle
 
 import time
 import warnings
+import logging
+from os.path import expanduser
 
 
 class SFO(object):
@@ -72,6 +74,15 @@ class SFO(object):
 
         See README.md for example code.
         """
+
+        # logging
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.DEBUG)
+        logfile = expanduser('~/Dropbox/sfo_{}.log'.format(
+            time.strftime('%Y-%m-%d_%H-%M-%S')))
+        handler = logging.FileHandler(logfile)
+        handler.setLevel(logging.DEBUG)
+        self.logger.addHandler(handler)
 
         self.display = display
         self.f_df = f_df
@@ -196,6 +207,8 @@ class SFO(object):
                 "than 25 minibatches.  See Figure 2c in SFO paper.\n"
                 "You may want to use more than the current %d minibatches.\n"%(self.N)))
 
+        self.logger.info('Initialized SFO')
+
     def optimize(self, num_passes=10, num_steps=None):
         """
         Optimize the objective function.  num_steps is the number of subfunction calls to make,
@@ -208,6 +221,8 @@ class SFO(object):
 
         if num_steps is None:
             num_steps = int(num_passes*self.N)
+
+        self.logger.info('Running SFO for {} steps'.format(num_steps))
 
         for i in range(num_steps):
             if self.display > 1:
@@ -1009,6 +1024,8 @@ class SFO(object):
         ## choose an index to update
         indx = self.get_target_index()
 
+        self.logger.info('Working on data batch {}'.format(indx))
+
         if self.display > 2:
             print("||dtheta|| {0},".format(np.sqrt(np.sum((self.theta - self.theta_prior_step)**2))))
             print("index {0}, last f {1},".format(indx, self.hist_f[indx,0]))
@@ -1020,16 +1037,23 @@ class SFO(object):
 
         # evaluate subfunction value and gradient at new position
         f, df_proj = self.f_df_wrapper(self.theta, indx)
+        self.logger.debug('Objective {}'.format(f))
+        self.logger.debug('Gradient norm {}'.format(np.linalg.norm(df_proj)))
 
         # check for a failed update step, and adjust f, df, and self.theta
         # as appropriate if one occurs.
         step_failure, f, df_proj = self.handle_step_failure(f, df_proj, indx)
+        if step_failure:
+            self.logger.warning('Step failure!')
+            self.logger.debug('Modified objective {}'.format(f))
+            self.logger.debug('Modified gradient norm {}'.format(np.linalg.norm(df_proj)))
 
         # add the change in theta and the change in gradient to the history for this subfunction
         self.update_history(indx, self.theta_proj, f, df_proj)
 
         # increment the total distance traveled using the last update
         self.total_distance += np.sqrt(np.sum((self.theta - self.theta_prior_step)**2))
+        self.logger.debug('Total distance {}'.format(self.total_distance))
 
         # the current contribution from this subfunction to the total Hessian approximation
         H_pre_update = np.real(np.dot(self.b[:,:,indx], self.b[:,:,indx].T))
@@ -1089,6 +1113,9 @@ class SFO(object):
 
         # backup the prior position, in case this is a failed step
         self.theta_prior_step = self.theta.copy()
+
+        self.logger.debug('Step length {}'.format(np.linalg.norm(dtheta)))
+
         # update theta to the new location
         self.theta += dtheta
         self.theta_proj += dtheta_proj
@@ -1101,3 +1128,6 @@ class SFO(object):
         # record how much time was taken by this learning step
         time_diff = time.time() - time_pass_start
         self.time_pass += time_diff
+
+        self.logger.debug('Step time {}'.format(time_diff))
+        self.logger.debug('Elapsed time {}'.format(self.time_pass))
