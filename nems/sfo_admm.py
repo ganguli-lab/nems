@@ -1057,45 +1057,63 @@ class SFO(object):
 
         # the current contribution from this subfunction to the total Hessian approximation
         H_pre_update = np.real(np.dot(self.b[:,:,indx], self.b[:,:,indx].T))
+        self.logger.debug('H_pre_update: {}'.format(H_pre_update))
+
         ## update this subfunction's Hessian estimate
         self.update_hessian(indx)
+        self.logger.debug('updated hessian')
+
         # the new contribution from this subfunction to the total approximate hessian
         H_new = np.real(np.dot(self.b[:,:,indx], self.b[:,:,indx].T))
+        self.logger.debug('computed H_new {}'.format(H_new.shape))
+
         # update total Hessian using this subfunction's updated contribution
         self.full_H += H_new - H_pre_update
+        self.logger.debug('added to full_H {}'.format(self.full_H.shape))
 
         # calculate the total gradient, total Hessian, and total function value at the current location
         full_df = 0.
+        self.logger.debug('computing the total objective')
         for i in range(self.N):
             dtheta = self.theta_proj - self.last_theta[:,[i]]
             bdtheta = np.dot(self.b[:,:,i].T, dtheta)
             Hdtheta = np.real(np.dot(self.b[:,:,i], bdtheta))
             Hdtheta += dtheta*self.min_eig_sub[i] # the diagonal contribution
             full_df += Hdtheta + self.last_df[:,[i]]
+            self.logger.debug('\tcomputed batch {}'.format(i))
 
         # add in the ADMM augmented Hessian term
         full_H_combined = self.get_full_H_with_diagonal() + np.eye(self.K_max) * self.admm_rho
+        self.logger.debug('added the augmented Hessian. about to invert!')
 
         # TODO - Use Woodbury identity instead of recalculating full inverse
         full_H_inv = np.linalg.inv(full_H_combined)
+        self.logger.debug('finished inverting the Hessian!')
 
         # update subspace with ADMM previous theta location
         assert ('theta_admm_prev' in self.__dict__), "Please set theta_admm_prev before calling optimize"
         self.update_subspace(self.theta_admm_prev)
         theta_admm_prev_subspace = np.dot(self.P.T, self.theta_admm_prev)
+        self.logger.debug('updated subspace')
 
         # add in the ADMM augmented gradient term
         full_df += (self.theta_proj - theta_admm_prev_subspace) * self.admm_rho
+        self.logger.debug('added the augmented hessian')
 
         # calculate an update step
         dtheta_proj = -np.dot(full_H_inv, full_df) * self.step_scale
+        self.logger.debug('calculating the quasi-newton step')
 
         dtheta_proj_length = np.sqrt(np.sum(dtheta_proj**2))
+        self.logger.debug('projected step length {}'.format(dtheta_proj_length))
+
         if dtheta_proj_length < self.minimum_step_length:
+            self.logger.warning('projected length below the minimum. forcing minimum')
             dtheta_proj *= self.minimum_step_length/dtheta_proj_length
             dtheta_proj_length = self.minimum_step_length
             if self.display > 3:
                 print("forcing minimum step length")
+
         if self.eval_count_total > self.N and dtheta_proj_length > self.eps:
             # only allow a step to be up to a factor of max_step_length_ratio longer than the
             # average step length
@@ -1103,12 +1121,14 @@ class SFO(object):
             length_ratio = dtheta_proj_length / avg_length
             ratio_scale = self.max_step_length_ratio
             if length_ratio > ratio_scale:
+                self.logger.warning('step length is too big')
                 if self.display > 3:
                     print("truncating step length from %g to %g"%(dtheta_proj_length, ratio_scale*avg_length))
                 dtheta_proj_length /= length_ratio/ratio_scale
                 dtheta_proj /= length_ratio/ratio_scale
 
         # the update to theta, in the full dimensional space
+        self.logger.debug('about to compute the update to theta in the full space')
         dtheta = np.dot(self.P, dtheta_proj)
 
         # backup the prior position, in case this is a failed step
