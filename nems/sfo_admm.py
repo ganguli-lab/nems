@@ -7,6 +7,7 @@ Attribution-Noncommercial License.
 
 #from __future__ import print_function
 import numpy as np
+from scipy.linalg import cho_factor, cho_solve
 from random import shuffle
 
 import time
@@ -76,13 +77,13 @@ class SFO(object):
         """
 
         # logging
-        self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.DEBUG)
-        logfile = expanduser('~/Dropbox/sfo_{}.log'.format(
-            time.strftime('%Y-%m-%d_%H-%M-%S')))
-        handler = logging.FileHandler(logfile)
-        handler.setLevel(logging.DEBUG)
-        self.logger.addHandler(handler)
+        # self.logger = logging.getLogger(__name__)
+        # self.logger.setLevel(logging.DEBUG)
+        # logfile = expanduser('~/Dropbox/sfo_{}.log'.format(
+            # time.strftime('%Y-%m-%d_%H-%M-%S')))
+        # handler = logging.FileHandler(logfile)
+        # handler.setLevel(logging.DEBUG)
+        # self.logger.addHandler(handler)
 
         self.display = display
         self.f_df = f_df
@@ -207,7 +208,7 @@ class SFO(object):
                 "than 25 minibatches.  See Figure 2c in SFO paper.\n"
                 "You may want to use more than the current %d minibatches.\n"%(self.N)))
 
-        self.logger.info('Initialized SFO')
+        # self.logger.info('Initialized SFO')
 
     def optimize(self, num_passes=10, num_steps=None):
         """
@@ -222,7 +223,7 @@ class SFO(object):
         if num_steps is None:
             num_steps = int(num_passes*self.N)
 
-        self.logger.info('Running SFO for {} steps'.format(num_steps))
+        # self.logger.info('Running SFO for {} steps'.format(num_steps))
 
         for i in range(num_steps):
             if self.display > 1:
@@ -982,17 +983,20 @@ class SFO(object):
         return step_failure, f, df_proj
 
 
-    def expand_active_subfunctions(self, full_H_inv, step_failure):
+    # def expand_active_subfunctions(self, full_H_inv, step_failure):
+    def expand_active_subfunctions(self, cho, step_failure):
         """
         expand the set of active subfunctions as appropriate
         """
         # power in the average gradient direction
         df_avg = np.mean(self.last_df[:,self.active], axis=1).reshape((-1,1))
-        p_df_avg = np.sum(df_avg * np.dot(full_H_inv, df_avg))
+        # p_df_avg = np.sum(df_avg * np.dot(full_H_inv, df_avg))
+        p_df_avg = np.sum(df_avg * cho_solve(cho, df_avg))
         # power of the standard error
         ldfs = self.last_df[:,self.active] - df_avg
         num_active = np.sum(self.active)
-        p_df_sum = np.sum(ldfs * np.dot(full_H_inv, ldfs)) / num_active / (num_active - 1)
+        # p_df_sum = np.sum(ldfs * np.dot(full_H_inv, ldfs)) / num_active / (num_active - 1)
+        p_df_sum = np.sum(ldfs * cho_solve(cho, ldfs)) / num_active / (num_active - 1)
         # if the standard errror in the estimated gradient is the same order of magnitude as the gradient,
         # we want to increase the size of the active set
         increase_desirable = p_df_sum >= p_df_avg*self.max_gradient_noise
@@ -1024,7 +1028,7 @@ class SFO(object):
         ## choose an index to update
         indx = self.get_target_index()
 
-        self.logger.info('Working on data batch {}'.format(indx))
+        # self.logger.info('Working on data batch {}'.format(indx))
 
         if self.display > 2:
             print("||dtheta|| {0},".format(np.sqrt(np.sum((self.theta - self.theta_prior_step)**2))))
@@ -1037,78 +1041,86 @@ class SFO(object):
 
         # evaluate subfunction value and gradient at new position
         f, df_proj = self.f_df_wrapper(self.theta, indx)
-        self.logger.debug('Objective {}'.format(f))
-        self.logger.debug('Gradient norm {}'.format(np.linalg.norm(df_proj)))
+        # self.logger.debug('Objective {}'.format(f))
+        # self.logger.debug('Gradient norm {}'.format(np.linalg.norm(df_proj)))
 
         # check for a failed update step, and adjust f, df, and self.theta
         # as appropriate if one occurs.
         step_failure, f, df_proj = self.handle_step_failure(f, df_proj, indx)
-        if step_failure:
-            self.logger.warning('Step failure!')
-            self.logger.debug('Modified objective {}'.format(f))
-            self.logger.debug('Modified gradient norm {}'.format(np.linalg.norm(df_proj)))
+        # if step_failure:
+            # self.logger.warning('Step failure!')
+            # self.logger.debug('Modified objective {}'.format(f))
+            # self.logger.debug('Modified gradient norm {}'.format(np.linalg.norm(df_proj)))
 
         # add the change in theta and the change in gradient to the history for this subfunction
         self.update_history(indx, self.theta_proj, f, df_proj)
 
         # increment the total distance traveled using the last update
         self.total_distance += np.sqrt(np.sum((self.theta - self.theta_prior_step)**2))
-        self.logger.debug('Total distance {}'.format(self.total_distance))
+        # self.logger.debug('Total distance {}'.format(self.total_distance))
 
         # the current contribution from this subfunction to the total Hessian approximation
         H_pre_update = np.real(np.dot(self.b[:,:,indx], self.b[:,:,indx].T))
-        self.logger.debug('H_pre_update: {}'.format(H_pre_update))
+        # self.logger.debug('H_pre_update: {}'.format(H_pre_update.shape))
 
         ## update this subfunction's Hessian estimate
         self.update_hessian(indx)
-        self.logger.debug('updated hessian')
+        # self.logger.debug('updated hessian')
 
         # the new contribution from this subfunction to the total approximate hessian
         H_new = np.real(np.dot(self.b[:,:,indx], self.b[:,:,indx].T))
-        self.logger.debug('computed H_new {}'.format(H_new.shape))
+        # self.logger.debug('computed H_new {}'.format(H_new.shape))
 
         # update total Hessian using this subfunction's updated contribution
         self.full_H += H_new - H_pre_update
-        self.logger.debug('added to full_H {}'.format(self.full_H.shape))
+        # self.logger.debug('added to full_H {}'.format(self.full_H.shape))
 
         # calculate the total gradient, total Hessian, and total function value at the current location
         full_df = 0.
-        self.logger.debug('computing the total objective')
+        # self.logger.debug('computing the total objective')
         for i in range(self.N):
             dtheta = self.theta_proj - self.last_theta[:,[i]]
             bdtheta = np.dot(self.b[:,:,i].T, dtheta)
             Hdtheta = np.real(np.dot(self.b[:,:,i], bdtheta))
             Hdtheta += dtheta*self.min_eig_sub[i] # the diagonal contribution
             full_df += Hdtheta + self.last_df[:,[i]]
-            self.logger.debug('\tcomputed batch {}'.format(i))
+            # self.logger.debug('\tcomputed batch {}'.format(i))
 
         # add in the ADMM augmented Hessian term
         full_H_combined = self.get_full_H_with_diagonal() + np.eye(self.K_max) * self.admm_rho
-        self.logger.debug('added the augmented Hessian. about to invert!')
+        # self.logger.debug('added the augmented Hessian. about to invert!')
+
+        # ev = np.linalg.eigvals(full_H_combined)
+        # self.logger.debug('Minimum eigenvalue: {}'.format(np.min(ev)))
+        # self.logger.debug('Maximum eigenvalue: {}'.format(np.max(ev)))
+
+        # Use cholesky factorization to solve
+        cho = cho_factor(full_H_combined)
 
         # TODO - Use Woodbury identity instead of recalculating full inverse
-        full_H_inv = np.linalg.inv(full_H_combined)
-        self.logger.debug('finished inverting the Hessian!')
+        # full_H_inv = np.linalg.inv(full_H_combined)
+        # self.logger.debug('finished inverting the Hessian!')
 
         # update subspace with ADMM previous theta location
         assert ('theta_admm_prev' in self.__dict__), "Please set theta_admm_prev before calling optimize"
         self.update_subspace(self.theta_admm_prev)
         theta_admm_prev_subspace = np.dot(self.P.T, self.theta_admm_prev)
-        self.logger.debug('updated subspace')
+        # self.logger.debug('updated subspace')
 
         # add in the ADMM augmented gradient term
         full_df += (self.theta_proj - theta_admm_prev_subspace) * self.admm_rho
-        self.logger.debug('added the augmented hessian')
+        # self.logger.debug('added the augmented hessian')
 
         # calculate an update step
-        dtheta_proj = -np.dot(full_H_inv, full_df) * self.step_scale
-        self.logger.debug('calculating the quasi-newton step')
+        # dtheta_proj = -np.dot(full_H_inv, full_df) * self.step_scale
+        dtheta_proj = -cho_solve(cho, full_df) * self.step_scale
+        # self.logger.debug('calculating the quasi-newton step')
 
         dtheta_proj_length = np.sqrt(np.sum(dtheta_proj**2))
-        self.logger.debug('projected step length {}'.format(dtheta_proj_length))
+        # self.logger.debug('projected step length {}'.format(dtheta_proj_length))
 
         if dtheta_proj_length < self.minimum_step_length:
-            self.logger.warning('projected length below the minimum. forcing minimum')
+            # self.logger.warning('projected length below the minimum. forcing minimum')
             dtheta_proj *= self.minimum_step_length/dtheta_proj_length
             dtheta_proj_length = self.minimum_step_length
             if self.display > 3:
@@ -1121,20 +1133,20 @@ class SFO(object):
             length_ratio = dtheta_proj_length / avg_length
             ratio_scale = self.max_step_length_ratio
             if length_ratio > ratio_scale:
-                self.logger.warning('step length is too big')
+                # self.logger.warning('step length is too big')
                 if self.display > 3:
                     print("truncating step length from %g to %g"%(dtheta_proj_length, ratio_scale*avg_length))
                 dtheta_proj_length /= length_ratio/ratio_scale
                 dtheta_proj /= length_ratio/ratio_scale
 
         # the update to theta, in the full dimensional space
-        self.logger.debug('about to compute the update to theta in the full space')
+        # self.logger.debug('about to compute the update to theta in the full space')
         dtheta = np.dot(self.P, dtheta_proj)
 
         # backup the prior position, in case this is a failed step
         self.theta_prior_step = self.theta.copy()
 
-        self.logger.debug('Step length {}'.format(np.linalg.norm(dtheta)))
+        # self.logger.debug('Step length {}'.format(np.linalg.norm(dtheta)))
 
         # update theta to the new location
         self.theta += dtheta
@@ -1143,11 +1155,12 @@ class SFO(object):
         self.f_predicted_total_improvement = 0.5 * np.dot(dtheta_proj.T, np.dot(full_H_combined, dtheta_proj))
 
         ## expand the set of active subfunctions as appropriate
-        self.expand_active_subfunctions(full_H_inv, step_failure)
+        # self.expand_active_subfunctions(full_H_inv, step_failure)
+        self.expand_active_subfunctions(cho, step_failure)
 
         # record how much time was taken by this learning step
         time_diff = time.time() - time_pass_start
         self.time_pass += time_diff
 
-        self.logger.debug('Step time {}'.format(time_diff))
-        self.logger.debug('Elapsed time {}'.format(self.time_pass))
+        # self.logger.debug('Step time {}'.format(time_diff))
+        # self.logger.debug('Elapsed time {}'.format(self.time_pass))
