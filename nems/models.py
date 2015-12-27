@@ -48,9 +48,6 @@ from . import visualization
 from . import tentbasis
 from .sfo_admm import SFO
 
-# debugging
-import q
-
 # exports
 __all__ = ['NeuralEncodingModel', 'LNLN']
 
@@ -589,9 +586,6 @@ class LNLN(NeuralEncodingModel):
         else:
             obj_gradient = None
 
-        q(obj_value)
-        q(np.linalg.norm(obj_gradient))
-
         return obj_value, obj_gradient
 
     def noisy_oracle(self, key, theta_other):
@@ -619,7 +613,6 @@ class LNLN(NeuralEncodingModel):
 
         return f_df_wrapper
 
-    @q.q
     def fit(self,
             num_alt=2,
             max_iter=20,
@@ -703,22 +696,16 @@ class LNLN(NeuralEncodingModel):
                 optimizer=loglikelihood_optimizer,
                 num_steps=num_likelihood_steps)
 
-            # debugging callback
-            def cb(theta, metadata):
-                q(np.linalg.norm(theta))
-                q(metadata)
-
             # add regularization terms
             [opt.add_regularizer(reg) for reg in self.regularizers[param_key]]
 
             # run the optimization procedure
             t0 = perf_counter()
-            q.q('Running SFO')
             opt.minimize(
                 theta_current[param_key],
                 max_iter=max_iter,
                 disp=disp,
-                callback=cb)
+                callback=callback)
             t1 = perf_counter() - t0
             print('Finished optimizing ' + param_key + '. Elapsed time: ' + tableprint.humantime(t1))
 
