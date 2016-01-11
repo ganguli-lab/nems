@@ -8,11 +8,10 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from toolz import curry, compose
 from scipy.stats import skew
+from jetpack import image
 
 import pyret.visualizations as viz
 import pyret.filtertools as ft
-
-# from seaborn import color_palette
 
 
 def contour(W, n=3, **kwargs):
@@ -64,6 +63,17 @@ def plotcells(W, n=15, alpha=0.4, palette='pastel'):
     ax.set_ylim(0,n)
 
     return ax
+
+
+def hcat(filters, newshape=None):
+    """
+    horizontally concatenate a bunch of matrices and display the result as an image
+    """
+
+    if newshape is None:
+        newshape = filters[0].shape
+
+    image(np.hstack([f.reshape(newshape) for f in filters]))
 
 
 @curry
