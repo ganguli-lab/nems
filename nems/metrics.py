@@ -18,14 +18,20 @@ def cc(r, rhat):
     return np.corrcoef(np.vstack((rhat, r)))[0, 1]
 
 
-def lli(r, rhat):
+def lli(r, rhat, dt=1e-2):
     """
     Log-likelihood improvement over a mean rate model (in bits per spike)
     """
 
-    mean = np.mean(rhat)
-    mu = float(np.mean(r * np.log(mean) - mean))
-    return (np.mean(r * np.log(rhat) - rhat) - mu) / (mean * np.log(2))
+    # mean firing rate
+    mu = np.mean(r)
+
+    # poisson log-likelihood
+    def loglikelihood(q):
+        return r * np.log(q) - q
+
+    # difference in log-likelihoods (in bits per spike)
+    return np.mean(loglikelihood(rhat) - loglikelihood(mu)) / (mu * np.log(2))
 
 
 def rmse(r, rhat):
