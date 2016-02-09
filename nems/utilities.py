@@ -67,7 +67,7 @@ def nrm(x):
 
 @curry
 def microshift(dx, W):
-    return W + dx*np.vstack(map(np.gradient, W.T)).T
+    return W + dx * np.vstack(map(np.gradient, W.T)).T
 
 
 @curry

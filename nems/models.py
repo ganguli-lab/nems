@@ -296,9 +296,9 @@ class NeuralEncodingModel(object):
             self.indices['test'] = test_indices
             self.fit(*args, **kwargs)
             results.append(self.test(self.theta))
-            print('-'*20)
+            print('-' * 20)
             print('Finished k-fold ({} total)'.format(nfolds))
-            print('-'*20)
+            print('-' * 20)
 
         return results
 
@@ -805,10 +805,10 @@ class LNLN(NeuralEncodingModel):
         M = theta['W'].shape[0]                 # number of subunits
         P = theta['f'].shape[1]                 # nonlinearity parameters
         T = r.size
-        H = np.zeros((N*M + P*M, N*M + P*M))
+        H = np.zeros((N * M + P * M, N * M + P * M))
 
         # gradient and Hessian factors
-        grad_factor = 1 - r/rhat
+        grad_factor = 1 - r / rhat
         hess_factor = r / (rhat**2)
 
         # nonlinearity projection
@@ -830,7 +830,7 @@ class LNLN(NeuralEncodingModel):
         x_vec = np.rollaxis(
             self.data[data_index]['stim'], -1).reshape(N, T)      # N x T
         # M*P x T
-        z_vec = np.rollaxis(z, -1).reshape(M*P, T)
+        z_vec = np.rollaxis(z, -1).reshape(M * P, T)
         scale_factor = np.diag(
             grad_factor *
             dr2dz2 +
@@ -838,7 +838,7 @@ class LNLN(NeuralEncodingModel):
             drdz**2)    # diagonal(T)
 
         # nonlinearity - nonlinearity portion
-        H[-(M*P):, -(M*P):] = z_vec.dot(scale_factor.dot(z_vec.T))
+        H[-(M * P):, -(M * P):] = z_vec.dot(scale_factor.dot(z_vec.T))
 
         # loop over subunits
         for j1 in range(M):
@@ -850,8 +850,8 @@ class LNLN(NeuralEncodingModel):
             sf_zgrad = scale_factor * np.diag(zgrad_j1)
 
             # subunit-nonlinearity block
-            H[j1*N:(j1+1)*N, -(M*P):] = x_vec.dot(sf_zgrad.dot(z_vec.T))
-            H[-(M*P):, j1*N:(j1+1)*N] = H[j1*N:(j1+1)*N, -(M*P):].T
+            H[j1 * N:(j1 + 1) * N, -(M * P):] = x_vec.dot(sf_zgrad.dot(z_vec.T))
+            H[-(M * P):, j1 * N:(j1 + 1) * N] = H[j1 * N:(j1 + 1) * N, -(M * P):].T
 
             # subunit-subunit block
             for j2 in range(M):
@@ -859,8 +859,7 @@ class LNLN(NeuralEncodingModel):
                 zgrad_j2 = np.diag(zproj[j2, :])
 
                 # update this portion of the Hessian
-                H[j1*N:(j1+1)*N, j2*N:(j2+1)
-                  * N] = x_vec.dot((sf_zgrad * zgrad_j2).dot(x_vec.T))
+                H[j1 * N:(j1 + 1) * N, j2 * N:(j2 + 1) * N] = x_vec.dot((sf_zgrad * zgrad_j2).dot(x_vec.T))
 
                 # diagonal term (for the same subunit)
                 if j1 == j2:
