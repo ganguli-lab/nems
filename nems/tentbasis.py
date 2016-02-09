@@ -73,7 +73,7 @@ class Nonlinearity(object):
         if ax is None:
             ax = plt.gca()
 
-        ax.plot(x,y,'-',color=color)
+        ax.plot(x, y, '-', color=color)
         ax.set_xlabel('x', fontsize=22)
         ax.set_ylabel('f(x)', fontsize=22)
 
@@ -162,11 +162,11 @@ class Linear(Nonlinearity):
             if idx > 0:
                 il = np.where(((xr >= self.centers[idx - 1]) & (xr <= c)))
                 Phi[il, idx] += (xr[il] - self.centers[idx - 1]) / (c - self.centers[idx - 1])
-                PhiGrad[il, j] += 1
+                PhiGrad[il, idx] += 1
 
             # right leg of the tent
             if idx < self.centers.size - 1:
-                ir = np.where(( (xr >= self.centers[idx]) & (xr <= self.centers[idx + 1]) ))
+                ir = np.where(((xr >= self.centers[idx]) & (xr <= self.centers[idx + 1])))
                 Phi[ir, idx] += (self.centers[idx + 1] - xr[ir]) / (self.centers[idx + 1] - c)
                 PhiGrad[ir, idx] -= 1
 
@@ -184,8 +184,8 @@ class Ispline(Nonlinearity):
         self.order = order
 
         # overwrite centers
-        centers = np.pad(np.linspace(*(tent_span + (self.num_tents-1,))), self.order-1, 'edge')
-        self.centers = np.r_[centers, [centers[-1]]*5]
+        centers = np.pad(np.linspace(*(tent_span + (self.num_tents - 1,))), self.order - 1, 'edge')
+        self.centers = np.r_[centers, [centers[-1]] * 5]
 
     def __call__(self, x, hess=False):
         """
@@ -228,13 +228,13 @@ def make_rcos_basis(tau, numBases, bias=0.2):
         raise ValueError('Bias term must be positive.')
 
     # log-scaled time range to place peak centers, plus a factor for stability
-    logTime = np.log(tau + bias + 1e-20);
+    logTime = np.log(tau + bias + 1e-20)
 
     # centers for basis vectors
-    centers = np.linspace(logTime[0], logTime[-1], numBases);
+    centers = np.linspace(logTime[0], logTime[-1], numBases)
 
     # make the basis
-    Phi = _rcos(logTime.reshape(-1,1), centers.reshape(1,-1), np.mean(np.diff(centers)));
+    Phi = _rcos(logTime.reshape(-1, 1), centers.reshape(1, -1), np.mean(np.diff(centers)))
 
     # return basis and orthogonalized basis
     return Phi, orth(Phi)
@@ -252,7 +252,7 @@ def _rcos(x, c, dc):
 
     """
 
-    return 0.5*(np.cos(np.maximum(-np.pi,np.minimum(np.pi,0.5*(x-c)*np.pi/dc)))+1)
+    return 0.5 * (np.cos(np.maximum(-np.pi, np.minimum(np.pi, 0.5 * (x - c) * np.pi / dc))) + 1)
 
 
 def _mspline(x, centers, order, idx):
