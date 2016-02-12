@@ -1,5 +1,5 @@
 """
-Objects for fitting and testing Neural Encoding models
+Objects for fitting and testing Neural Encoding Models
 
 This module provides objects useful for fitting neural encoding models (nems).
 Nems are typically probabilistic models of the response of a sensory neuron to
@@ -39,6 +39,7 @@ import numpy as np
 import tableprint
 from proxalgs import Optimizer, operators
 from sklearn.cross_validation import KFold
+from tqdm import tqdm
 
 # relative imports
 from . import utilities
@@ -909,6 +910,23 @@ class LNLN(NeuralEncodingModel):
                     0, 2])))  # dims: (M)
 
         return u, z, zgrad, zhess, drdz, dr2dz2, r
+
+    def predict(self, theta):
+        """Generates the subunit activations and model firing rates"""
+
+        rhat = list()
+        projections = list()
+        subunits = list()
+        rates = list()
+        for d in tqdm(self.data):
+            u, z, _, _, _, _, rate = self.rate(theta, d['stim'])
+            subunit = np.einsum('ijk,ik->ij', z, theta['f'])
+            subunits.append(subunit)
+            projections.append(u)
+            rates.append(d['rate'])
+            rhat.append(rate)
+
+        return np.hstack(projections), np.hstack(subunits), np.hstack(rhat), np.hstack(rates)
 
 
 def _alert(message):
