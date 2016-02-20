@@ -1,5 +1,5 @@
 """
-Objects for fitting and testing Neural Encoding Models
+Objects for fitting and testing Neural Encoding models
 
 This module provides objects useful for fitting neural encoding models (nems).
 Nems are typically probabilistic models of the response of a sensory neuron to
@@ -113,7 +113,7 @@ class NeuralEncodingModel(object):
 
         # store stimulus and rate data for each minibatch in a list
         self.data = list()
-        for idx in range(num_minibatches):
+        for idx in tqdm(range(num_minibatches)):
 
             # indices for this minibatch
             minibatch_indices = slice(
@@ -160,15 +160,10 @@ class NeuralEncodingModel(object):
         Compute an STA
 
         """
-        num_samples = float(self.data[0]['rate'].size)
-        stas = [
-            np.tensordot(
-                d['stim'],
-                d['rate'],
-                axes=(
-                    [1],
-                    [0])) /
-            num_samples for d in self.data]
+        stas = []
+        for d in tqdm(self.data):
+            inds = np.where(d['rate'] > 0)[0]
+            stas.append(np.tensordot(d['stim'][:, inds, :], d['rate'][inds], axes=([1], [0])) / d['rate'][inds].sum())
         self.sta = np.mean(stas, axis=0).reshape(self.filter_dims)
 
     def add_regularizer(self, theta_key, proxfun, **kwargs):
@@ -913,20 +908,17 @@ class LNLN(NeuralEncodingModel):
 
     def predict(self, theta):
         """Generates the subunit activations and model firing rates"""
-
         rhat = list()
-        projections = list()
         subunits = list()
         rates = list()
         for d in tqdm(self.data):
-            u, z, _, _, _, _, rate = self.rate(theta, d['stim'])
+            _, z, _, _, _, _, rate = self.rate(theta, d['stim'])
             subunit = np.einsum('ijk,ik->ij', z, theta['f'])
             subunits.append(subunit)
-            projections.append(u)
             rates.append(d['rate'])
             rhat.append(rate)
 
-        return np.hstack(projections), np.hstack(subunits), np.hstack(rhat), np.hstack(rates)
+        return np.hstack(subunits), np.hstack(rhat), np.hstack(rates)
 
 
 def _alert(message):
