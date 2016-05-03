@@ -904,10 +904,7 @@ class LNLN(NeuralEncodingModel):
 
         # compute log(rate) and the firing rate
         r, drdz, dr2dz2 = self.final_nonlin_function(
-            np.tensordot(
-                theta['f'], z, ([
-                    0, 1], [
-                    0, 2])))  # dims: (M)
+            np.tensordot(theta['f'], z, ([0, 1], [0, 2])))  # dims: (M)
 
         return u, z, zgrad, zhess, drdz, dr2dz2, r
 
