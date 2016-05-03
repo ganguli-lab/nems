@@ -282,7 +282,7 @@ class NeuralEncodingModel(object):
         headers = ['Set'] + list(map(str.upper, metrics.Score._fields))
 
         # print the table
-        tableprint.table(data, headers, column_width=10, format_spec='3g')
+        tableprint.table(data, headers, width=10, format_spec='3g')
 
         return results
 
@@ -714,7 +714,7 @@ class LNLN(NeuralEncodingModel):
 
         # print results based on the initial parameters
         print('\n')
-        _alert('Initial parameters')
+        tableprint.banner('Initial parameters')
         update_results()
 
         try:
@@ -725,7 +725,7 @@ class LNLN(NeuralEncodingModel):
 
                 # Fit filters
                 print('\n')
-                _alert('Fitting filters')
+                tableprint.banner('Fitting filters')
 
                 # wrapper for the objective and gradient
                 def f_df_wrapper(W, d):
@@ -749,7 +749,7 @@ class LNLN(NeuralEncodingModel):
 
                 # Fit nonlinearity
                 print('\n')
-                _alert('Fitting nonlinearity')
+                tableprint.banner('Fitting nonlinearity')
 
                 # wrapper for the objective and gradient
                 def f_df_wrapper(f, d):
@@ -924,7 +924,3 @@ class LNLN(NeuralEncodingModel):
             rhat.append(rate)
 
         return np.hstack(projections), np.hstack(subunits), np.hstack(rhat), np.hstack(rates)
-
-
-def _alert(message):
-    tableprint.table([], [message], column_width=20, line_char='=')
