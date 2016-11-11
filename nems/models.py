@@ -38,7 +38,7 @@ import h5py
 import numpy as np
 import tableprint
 from proxalgs import Optimizer, operators
-from sklearn.cross_validation import KFold
+from sklearn.model_selection import KFold
 from tqdm import tqdm
 
 # relative imports
