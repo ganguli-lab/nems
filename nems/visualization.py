@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from toolz import curry, compose
 from scipy.stats import skew
-from jetpack import image
+from jetpack import img
 import palettable
 import pyret.visualizations as viz
 import pyret.filtertools as ft
@@ -72,7 +72,7 @@ def hcat(filters, newshape=None, figsize=(8, 5)):
         newshape = filters[0].shape
 
     fig = plt.figure(figsize=figsize)
-    image(np.hstack([f.reshape(newshape) for f in filters]), fig=fig)
+    img(np.hstack([f.reshape(newshape) for f in filters]), fig=fig)
 
 
 @curry
