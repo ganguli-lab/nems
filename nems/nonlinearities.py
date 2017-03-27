@@ -3,9 +3,7 @@ Nonlinearities and their derivatives
 
 Each function returns the value and derivative of a nonlinearity. Given :math:`y = f(x)`, the function returns
 :math:`y` and :math:`dy/dx`
-
 """
-
 import numpy as np
 
 

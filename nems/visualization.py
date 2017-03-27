@@ -1,17 +1,16 @@
 """
 Tools for visualizing models
-
 """
-
-import numpy as np
-import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-from toolz import curry, compose
-from scipy.stats import skew
-from jetpack import img
+import matplotlib.pyplot as plt
+import numpy as np
 import palettable
-import pyret.visualizations as viz
+from scipy.stats import skew
+from toolz import compose, curry
+
 import pyret.filtertools as ft
+import pyret.visualizations as viz
+from jetpack import img
 
 
 def contour(W, n=3, **kwargs):
@@ -28,12 +27,7 @@ def contour(W, n=3, **kwargs):
 
     \\*\\*kwargs : keyword arguments
         Any keyword arguments for matplotlib.pyplot.contour
-
     """
-
-    # type checks
-    assert type(W) == np.ndarray, "The argument must be a numpy array"
-    assert W.ndim == 2, "The argument must be a matrix (two dimensions)"
 
     # skew-positive
     W *= np.sign(skew(W.ravel()))
@@ -110,7 +104,6 @@ def sort(W):
     Sorts the given list of spatiotemporal filters by the locataion
     of the spatial peak
     """
-
     spatial = lambda w: np.linalg.svd(w)[0][:, 0]
     maxidx = lambda v: np.argmax(v * np.sign(skew(v)))
     return sorted(W, key=compose(maxidx, spatial))

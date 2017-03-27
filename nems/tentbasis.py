@@ -18,11 +18,9 @@ where each tent function :math:`\phi` is a _fixed_ basis function, shifted
 along the input dimension to tile the input space. The function :math:`f(x)`
 is parameterized as a linear combination (with weights given by :math:`\alpha`)
 of these tent functions.
-
 """
-
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
 __all__ = ['Linear', 'Gaussian', 'Ispline', 'Nonlinearity', 'make_rcos_basis']
 
