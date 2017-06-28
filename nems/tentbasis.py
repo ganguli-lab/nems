@@ -21,12 +21,12 @@ of these tent functions.
 """
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.linalg import orth
 
 __all__ = ['Linear', 'Gaussian', 'Ispline', 'Nonlinearity', 'make_rcos_basis']
 
 
-class Nonlinearity(object):
-
+class Nonlinearity:
     def __init__(self, tent_span, num_tents):
         """
         Initialize a nonlinearity parameterized by tent basis functions
@@ -37,9 +37,7 @@ class Nonlinearity(object):
         tent_span           -- tuple designating the input range e.g. (min, max)
         num_tents           -- number of tent basis functions to use
         tent_type           -- shape of the basis functions (defaults to 'gaussian'. other option: 'linear')
-
         """
-
         self.tent_span = tent_span
         self.num_tents = num_tents
         self.num_params = num_tents + 1
@@ -50,13 +48,12 @@ class Nonlinearity(object):
         TODO: add documentation
         """
         name = str(self.__class__).rpartition('.')[2].partition("'")[0]
-        return "{} nonlinearity with {} parameters.".format(name, self.num_params)
+        return f"{name} nonlinearity with {self.num_params} parameters."
 
     def fit(self, x, y):
         """
         Estimate parameters (using a least squares fit) to approximate f(x) = y
         """
-
         Phi = self(x)[0]
         return np.linalg.lstsq(Phi, y)[0]
 
@@ -64,7 +61,6 @@ class Nonlinearity(object):
         """
         Plot the nonlinearity
         """
-
         x = np.linspace(*(self.tent_span + (num_samples,)))
         y = self(x)[0].dot(weights)
 
@@ -99,13 +95,11 @@ class Nonlinearity(object):
 
 
 class Gaussian(Nonlinearity):
-
     def __init__(self, tent_span, num_tents, sigmasq=0.2):
-        super(Gaussian, self).__init__(tent_span, num_tents)
+        super().__init__(tent_span, num_tents)
         self.sigmasq = sigmasq
 
     def __call__(self, x, hess=False):
-
         Phi = np.zeros((x.size, self.centers.size))
         PhiGrad = np.zeros(Phi.shape)
 
@@ -126,13 +120,12 @@ class Gaussian(Nonlinearity):
         zgrad = PhiGrad.reshape(x.shape + (-1,))
         zhess = PhiGrad2.reshape(x.shape + (-1,)) if hess else None
 
-        return super(Gaussian, self).append_bias(z, zgrad, zhess)
+        return super().append_bias(z, zgrad, zhess)
 
 
 class Linear(Nonlinearity):
-
     def __init__(self, tent_span, num_tents):
-        super(Linear, self).__init__(tent_span, num_tents)
+        super().__init__(tent_span, num_tents)
 
     def __eval__(self, x, hess=False):
         """
@@ -147,9 +140,7 @@ class Linear(Nonlinearity):
         -------
         Phi      -- each of the basis functions evaluated at the locations in x
         PhiGrad  -- derivative of each basis functions evaluated at the locations in x
-
         """
-
         Phi = np.zeros((x.size, self.centers.size))
         PhiGrad = np.zeros(Phi.shape)
         xr = x.ravel()
@@ -172,13 +163,12 @@ class Linear(Nonlinearity):
         zgrad = PhiGrad.reshape(x.shape + (-1,))
         zhess = np.zeros_like(zgrad) if hess else None
 
-        return super(Linear, self).append_bias(z, zgrad, zhess)
+        return super().append_bias(z, zgrad, zhess)
 
 
 class Ispline(Nonlinearity):
-
     def __init__(self, tent_span, num_tents, order=3):
-        super(Ispline, self).__init__(tent_span, num_tents)
+        super().__init__(tent_span, num_tents)
         self.order = order
 
         # overwrite centers
@@ -200,7 +190,7 @@ class Ispline(Nonlinearity):
         zgrad = PhiGrad.reshape(x.shape + (-1,))
         zhess = None
 
-        return super(Ispline, self).append_bias(z, zgrad, zhess)
+        return super().append_bias(z, zgrad, zhess)
 
 
 def make_rcos_basis(tau, numBases, bias=0.2):
@@ -217,10 +207,7 @@ def make_rcos_basis(tau, numBases, bias=0.2):
     -------
     Phi       -- the generated basis vectors
     PhiOrth   -- the same basis vectors, but orthogonalized
-
     """
-    from scipy.linalg import orth
-
     # bias must be nonnegative
     if bias <= 0:
         raise ValueError('Bias term must be positive.')
@@ -247,9 +234,7 @@ def _rcos(x, c, dc):
     -pi                 if        (x - c)*pi / 2*dc <  -pi
     (x-c)*pi / 2*dc     if -pi <= (x - c)*pi / 2*dc <= -pi
      pi                 if        (x - c)*pi / 2*dc >   pi
-
     """
-
     return 0.5 * (np.cos(np.maximum(-np.pi, np.minimum(np.pi, 0.5 * (x - c) * np.pi / dc))) + 1)
 
 
@@ -267,9 +252,7 @@ def _mspline(x, centers, order, idx):
     Returns
     -------
     y           -- a vector containing the spline values for the corresponding x-locations
-
     """
-
     if centers[idx + order] - centers[idx] == 0:
         return 0.0 * x
 
@@ -295,9 +278,7 @@ def _ispline(x, centers, order, idx):
     Returns
     -------
     y           -- a vector containing the spline values for the corresponding x-locations
-
     """
-
     y = np.zeros_like(x)
     for m in range(idx, np.minimum(idx + order, len(centers) - order - 1)):
         y += (centers[m + order + 1] - centers[m]) * _mspline(x, centers, order + 1, m) / (order + 1)

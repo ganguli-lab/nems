@@ -31,3 +31,4 @@ nosetests.xml
 coverage.xml
 
 tags
+.mypy_cache

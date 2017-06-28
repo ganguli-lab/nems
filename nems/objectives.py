@@ -1,8 +1,5 @@
 """
-Objective functions for computing the negative log-likelihood for different noise models
-
-Computes the negative log-likelihood of a model's predicted firing rate given a set of model
-parameters and experimental data.
+Objective functions
 """
 import numpy as np
 
@@ -24,17 +21,15 @@ def poisson_loglikelihood(theta, data, theta_fixed, modelrate, dt, regularizers)
     regularizers[key] is a function that takes as an argument the parameter value
       theta[key] and returns the regularization penalty (scalar) and gradient
       (same size as theta[key]) at that particular parameter value
-
     """
-
     # compute model firing rate
     theta_fixed.update(theta)
     logr, r, dr = modelrate(theta_fixed, data, keys=theta.keys())
 
     # poisson log-likelihood
-    eps = 1e-18
+    eps = 1e-12
     f = np.mean(r * dt - data['rate'] * logr)
-    fgrad = (dt - data['rate'] / (r + eps))                     # (k,m)
+    fgrad = (dt - data['rate'] / (r + eps))                     # (k, m)
     T = float(data['rate'].size)
 
     # gradient
@@ -47,11 +42,11 @@ def poisson_loglikelihood(theta, data, theta_fixed, modelrate, dt, regularizers)
 
         # ganglion cell filter (depends on the cell index, k)
         if dr[key].ndim == 3:
-            df[key] = np.squeeze(np.sum(dr[key] * fgrad.reshape(1, fgrad.shape[0], -1), axis=2))/T + pgrad
+            df[key] = np.squeeze(np.sum(dr[key] * fgrad.reshape(1, fgrad.shape[0], -1), axis=2)) / T + pgrad
 
         # other parameters (sum over the number of cells, k)
         elif dr[key].ndim == 4:
-            df[key] = np.tensordot(dr[key], fgrad, ([2, 3], [0, 1]))/T + pgrad  # dims: dr[key].shape[:2]
+            df[key] = np.tensordot(dr[key], fgrad, ([2, 3], [0, 1])) / T + pgrad  # dims: dr[key].shape[:2]
 
         else:
             raise ValueError('The number of dimensions of each value in the gradient (dr) needs to be 3 or 4')

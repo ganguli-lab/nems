@@ -4,7 +4,7 @@ Tools for visualizing models
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
-import palettable
+# import palettable
 from scipy.stats import skew
 from toolz import compose, curry
 
@@ -40,9 +40,9 @@ def plotcells(W, n=15, alpha=0.4, palette='pastel'):
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    colors = palettable.colorbrewer.qualitative.Set1_9.colors
+    # colors = palettable.colorbrewer.qualitative.Set1_9.colors
 
-    for wi, color in zip(W, colors):
+    for wi in W:
 
         spf = np.linalg.eigh(np.cov(wi.T.reshape(-1, n * n).T))[1][:, -1].reshape(n, n)
         tx = np.arange(n)
@@ -50,7 +50,7 @@ def plotcells(W, n=15, alpha=0.4, palette='pastel'):
         viz.ellipse(ell, ax=ax)
         ell.set_clip_box(ax.bbox)
         ell.set_alpha(alpha)
-        ell.set_facecolor(color)
+        # ell.set_facecolor(color)
 
     ax.set_xlim(0, n)
     ax.set_ylim(0, n)

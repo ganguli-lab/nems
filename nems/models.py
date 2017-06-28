@@ -326,9 +326,8 @@ class NeuralEncodingModel(object):
 
 
 class LNLN(NeuralEncodingModel):
-
     def __init__(self, stim, spkcounts, filter_dims, minibatch_size=None,
-                 frac_train=0.8, num_subunits=1, num_tents=10, sigmasq=0.5,
+                 frac_train=0.8, num_subunits=1, num_tents=20, sigmasq=0.3,
                  final_nonlinearity='softrect', num_temporal_bases=None,
                  **kwargs):
         """
@@ -426,7 +425,7 @@ class LNLN(NeuralEncodingModel):
             0] if 'W' in kwargs else num_subunits
 
         # initialize tent basis functions
-        tent_span = (-5, 5)          # suitable for z-scored input
+        tent_span = (-6, 6)          # suitable for z-scored input
         self.tents = tentbasis.Gaussian(tent_span, num_tents, sigmasq=sigmasq)
 
         # initialize parameter dictionary
