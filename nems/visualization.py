@@ -1,16 +1,13 @@
 """
 Tools for visualizing models
-
 """
-
-import numpy as np
-import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-from toolz import curry, compose
+import matplotlib.pyplot as plt
+import numpy as np
 from scipy.stats import skew
 from jetpack import img
-import palettable
 import pyret.visualizations as viz
+from toolz import compose, curry
 import pyret.filtertools as ft
 
 
@@ -28,12 +25,7 @@ def contour(W, n=3, **kwargs):
 
     \\*\\*kwargs : keyword arguments
         Any keyword arguments for matplotlib.pyplot.contour
-
     """
-
-    # type checks
-    assert type(W) == np.ndarray, "The argument must be a numpy array"
-    assert W.ndim == 2, "The argument must be a matrix (two dimensions)"
 
     # skew-positive
     W *= np.sign(skew(W.ravel()))
@@ -46,9 +38,9 @@ def plotcells(W, n=15, alpha=0.4, palette='pastel'):
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    colors = palettable.colorbrewer.qualitative.Set1_9.colors
+    # colors = palettable.colorbrewer.qualitative.Set1_9.colors
 
-    for wi, color in zip(W, colors):
+    for wi in W:
 
         spf = np.linalg.eigh(np.cov(wi.T.reshape(-1, n * n).T))[1][:, -1].reshape(n, n)
         tx = np.arange(n)
@@ -56,7 +48,7 @@ def plotcells(W, n=15, alpha=0.4, palette='pastel'):
         viz.ellipse(ell, ax=ax)
         ell.set_clip_box(ax.bbox)
         ell.set_alpha(alpha)
-        ell.set_facecolor(color)
+        # ell.set_facecolor(color)
 
     ax.set_xlim(0, n)
     ax.set_ylim(0, n)
@@ -110,7 +102,6 @@ def sort(W):
     Sorts the given list of spatiotemporal filters by the locataion
     of the spatial peak
     """
-
     spatial = lambda w: np.linalg.svd(w)[0][:, 0]
     maxidx = lambda v: np.argmax(v * np.sign(skew(v)))
     return sorted(W, key=compose(maxidx, spatial))

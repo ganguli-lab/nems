@@ -18,53 +18,44 @@ Classes
     thresholding operations. The parameters for the filter and nonlinearities
     of the first layer are learned, while the linear filter and nonlinearity of
     the second layer are fixed.
-
 """
 
-# standard library imports
-import os
-from time import strftime
 import copy
-from functools import partial
+import os
 from collections import defaultdict
+from functools import partial
+from time import strftime
+
+# third party packages
+import h5py
+import numpy as np
+import tableprint as tp
+from sklearn.model_selection import KFold
+
+from proxalgs import Optimizer, operators
+from tqdm import tqdm
+
+# relative imports
+from . import metrics, nonlinearities, tentbasis, utilities, visualization
+from .sfo_admm import SFO
 
 try:
     from time import perf_counter
 except ImportError:
     from time import time as perf_counter
 
-# third party packages
-import h5py
-import numpy as np
-import tableprint as tp
-from proxalgs import Optimizer, operators
-from sklearn.cross_validation import KFold
-from tqdm import tqdm
-
-# relative imports
-from . import utilities
-from . import metrics
-from . import nonlinearities
-from . import visualization
-from . import tentbasis
-from .sfo_admm import SFO
-
-# exports
 __all__ = ['NeuralEncodingModel', 'LNLN']
 
 
 class NeuralEncodingModel(object):
-
-    """
-    Neural enoding model super class
-
-    Contains helper functions for instantiating, fitting, and testing
-    neural encoding models.
-
-    """
-
     def __init__(self, modeltype, stimulus, spkcounts, filter_dims,
                  minibatch_size, frac_train=0.8, temporal_basis=None):
+        """
+        Neural enoding model super class
+
+        Contains helper functions for instantiating, fitting, and testing
+        neural encoding models.
+        """
 
         # model name / subclass
         self.modeltype = str.lower(modeltype)
@@ -120,7 +111,7 @@ class NeuralEncodingModel(object):
                 idx * minibatch_size,
                 (idx + 1) * minibatch_size)
 
-            # z-score the stimulus and save each minibatch, along with the rate
+            # store each minibatch along with the rate
             # and spikes if given
             if temporal_basis is None:
                 self.data.append({
@@ -134,7 +125,7 @@ class NeuralEncodingModel(object):
                 })
 
         # set and store random seed (for reproducibility)
-        self.random_seed = 12345
+        self.random_seed = np.random.randint(10000)
         print("Setting random seed to: %i" % self.random_seed)
         np.random.seed(self.random_seed)
 
@@ -160,10 +151,8 @@ class NeuralEncodingModel(object):
         Compute an STA
 
         """
-        stas = []
-        for d in tqdm(self.data):
-            inds = np.where(d['rate'] > 0)[0]
-            stas.append(np.tensordot(d['stim'][:, inds, :], d['rate'][inds], axes=([1], [0])) / d['rate'][inds].sum())
+        num_samples = float(self.data[0]['rate'].size)
+        stas = [np.tensordot(d['stim'], d['rate'], axes=([1], [0])) / num_samples for d in self.data]
         self.sta = np.mean(stas, axis=0).reshape(self.filter_dims)
 
     def add_regularizer(self, theta_key, proxfun, **kwargs):
@@ -180,7 +169,6 @@ class NeuralEncodingModel(object):
 
         \\*\\*kwargs : keyword arguments
             Any keyword arguments required by proxfun
-
         """
 
         # ensure regularizers have been initialized
@@ -235,7 +223,6 @@ class NeuralEncodingModel(object):
         held out data as follows:
 
         >>> train_results, test_results = model.test(model.theta)
-
         """
 
         # helper function
@@ -263,7 +250,6 @@ class NeuralEncodingModel(object):
         ----------
         theta : dict
             A dictionary of model parameters
-
         """
 
         # run test
@@ -340,9 +326,8 @@ class NeuralEncodingModel(object):
 
 
 class LNLN(NeuralEncodingModel):
-
     def __init__(self, stim, spkcounts, filter_dims, minibatch_size=None,
-                 frac_train=0.8, num_subunits=1, num_tents=10, sigmasq=0.5,
+                 frac_train=0.8, num_subunits=1, num_tents=20, sigmasq=0.3,
                  final_nonlinearity='softrect', num_temporal_bases=None,
                  **kwargs):
         """
@@ -407,7 +392,6 @@ class LNLN(NeuralEncodingModel):
         \\*\\*kwargs : keyword arguments
             if given arguments with the keys `W` or `f`, then those values are used to initialize the filter
             or nonlinearity parameters, respectively.
-
         """
 
         # initialize the model object
@@ -441,7 +425,7 @@ class LNLN(NeuralEncodingModel):
             0] if 'W' in kwargs else num_subunits
 
         # initialize tent basis functions
-        tent_span = (-5, 5)          # suitable for z-scored input
+        tent_span = (-6, 6)          # suitable for z-scored input
         self.tents = tentbasis.Gaussian(tent_span, num_tents, sigmasq=sigmasq)
 
         # initialize parameter dictionary
@@ -462,14 +446,11 @@ class LNLN(NeuralEncodingModel):
 
                 elif kwargs['W'].shape[-1] < self.tau:
                     temp = kwargs['W'].shape[-1]
-                    kwargs['W'] = kwargs['W'].dot(
-                        self.temporal_basis[
-                            :temp,
-                            :])
+                    kwargs['W'] = kwargs['W'].dot(self.temporal_basis[:temp, :])
 
             # ensure dimensions are consistent
-            assert self.theta_init['W'].shape == kwargs[
-                'W'].shape, "Shape of the filters (`W` keyword argument) " "are inconsistent with the given filter dimensions."
+            assert self.theta_init['W'].shape == kwargs['W'].shape, \
+                "Shape of the filters (`W` keyword argument) are inconsistent with the given filter dimensions."
 
             # normalize each of the given filters
             for idx, w in enumerate(kwargs['W']):
@@ -480,24 +461,18 @@ class LNLN(NeuralEncodingModel):
             # multiple subunits: random initialization
             if self.num_subunits > 1:
                 for idx in range(self.num_subunits):
-                    self.theta_init['W'][idx] = utilities.nrm(
-                        0.1 *
-                        np.random.randn(
-                            self.stim_dim,
-                            self.tau_filt))
+                    self.theta_init['W'][idx] = utilities.nrm(0.1 * np.random.randn(self.stim_dim, self.tau_filt))
 
             # single subunit: initialize with the STA
             else:
-                self.theta_init['W'][0] = utilities.nrm(
-                    self.sta).reshape(-1, self.sta.shape[-1])
+                self.theta_init['W'][0] = utilities.nrm(self.sta).reshape(-1, self.sta.shape[-1])
 
         # initialize nonlinearity parameters
         if 'f' in kwargs:
 
             # ensure dimensions are consistent
-            assert self.theta_init['f'].shape == kwargs['f'].shape, "Shape of the nonlinearity parameters" \
-                                                                    " (`f` keyword argument) are inconsistent with " \
-                                                                    "the number of tent basis functions."
+            assert self.theta_init['f'].shape == kwargs['f'].shape, \
+                "Shape of the nonlinearity parameters (`f` keyword argument) are inconsistent with the number of tent basis functions."
 
             self.theta_init['f'] = kwargs['f']
 
@@ -548,11 +523,10 @@ class LNLN(NeuralEncodingModel):
 
         obj_gradient : array_like
             Contains the gradient (as a numpy array) with respect to the parameters given by `param_gradient`
-
         """
 
-        # f is (K,P)
-        # W is (K,N,tau)
+        # f.shape is (K,P)
+        # W.shape is (K,N,tau)
         k, n, tau = W.shape
         m = (data['rate'].size - tau + 1)
 
@@ -568,13 +542,9 @@ class LNLN(NeuralEncodingModel):
 
         # compute gradient
         if param_gradient == 'W':
-            nonlin_proj = np.sum(
-                f[:, np.newaxis, :] * zgrad, axis=2)   # dims: (K, M)
-            weighted_proj = grad_factor[
-                np.newaxis,
-                :] * nonlin_proj  # dims: (K, M)
-            obj_gradient = np.tensordot(
-                weighted_proj, data['stim'], ([1], [1])) / float(m)
+            nonlin_proj = np.sum(f[:, np.newaxis, :] * zgrad, axis=2)   # dims: (K, M)
+            weighted_proj = grad_factor[np.newaxis, :] * nonlin_proj  # dims: (K, M)
+            obj_gradient = np.tensordot(weighted_proj, data['stim'], ([1], [1])) / float(m)
 
         elif param_gradient == 'f':
             obj_gradient = np.tensordot(grad_factor, z, ([0], [1])) / float(m)
@@ -599,34 +569,19 @@ class LNLN(NeuralEncodingModel):
         if key is 'W':
             def f_df_wrapper(theta):
                 ind = np.random.choice(list(self.indices['train']), size=1)
-                return self.f_df(
-                    theta,
-                    theta_other,
-                    self.data[ind],
-                    param_gradient='W')
+                return self.f_df(theta, theta_other, self.data[ind], param_gradient='W')
 
         elif key is 'f':
             def f_df_wrapper(theta):
                 ind = np.random.choice(list(self.indices['train']), size=1)
-                return self.f_df(
-                    theta_other,
-                    theta,
-                    self.data[ind],
-                    param_gradient='f')
+                return self.f_df(theta_other, theta, self.data[ind], param_gradient='f')
 
         else:
             raise ValueError('Incorrect key ' + key)
 
         return f_df_wrapper
 
-    def fit(self,
-            num_alt=2,
-            max_iter=20,
-            num_likelihood_steps=50,
-            disp=2,
-            check_grad=None,
-            callback=None):
-
+    def fit(self, num_alt=2, max_iter=20, num_likelihood_steps=50, disp=2, check_grad=None, callback=None):
         """
         Runs an optimization algorithm to learn the parameters of the model given training data and regularizers
 
@@ -673,7 +628,6 @@ class LNLN(NeuralEncodingModel):
         self.convergence = defaultdict(list)
 
         def update_results():
-
             if disp > 0:
                 tmp_results = self.print_test_results(theta_current)
                 for k in ('train', 'test'):
@@ -695,10 +649,7 @@ class LNLN(NeuralEncodingModel):
                 loglikelihood_optimizer.check_grad()
 
             # initialize the optimizer object
-            opt = Optimizer(
-                'sfo',
-                optimizer=loglikelihood_optimizer,
-                num_steps=num_likelihood_steps)
+            opt = Optimizer('sfo', optimizer=loglikelihood_optimizer, num_steps=num_likelihood_steps)
 
             # add regularization terms
             [opt.add_regularizer(reg) for reg in self.regularizers[param_key]]
@@ -735,17 +686,11 @@ class LNLN(NeuralEncodingModel):
                     return self.f_df(W, theta_current['f'], d, param_gradient='W')
 
                 # run the optimization procedure for this parameter
-                Wk = optimize_param(
-                    f_df_wrapper,
-                    'W',
-                    check_grad,
-                    alt_iter +
-                    0.5).copy()
+                Wk = optimize_param(f_df_wrapper, 'W', check_grad, alt_iter + 0.5).copy()
 
                 # normalize filters
                 for filter_index in range(Wk.shape[0]):
-                    theta_current['W'][filter_index] = utilities.nrm(
-                        Wk[filter_index])
+                    theta_current['W'][filter_index] = utilities.nrm(Wk[filter_index])
 
                 # print and save test results
                 update_results()
@@ -759,12 +704,7 @@ class LNLN(NeuralEncodingModel):
                     return self.f_df(theta_current['W'], f, d, param_gradient='f')
 
                 # run the optimization procedure for this parameter
-                theta_current['f'] = optimize_param(
-                    f_df_wrapper,
-                    'f',
-                    check_grad,
-                    alt_iter +
-                    1).copy()
+                theta_current['f'] = optimize_param(f_df_wrapper, 'f', check_grad, alt_iter + 1).copy()
 
                 # print and save test results
                 update_results()
@@ -781,7 +721,6 @@ class LNLN(NeuralEncodingModel):
         average the Hessian over all minibatches of data
 
         """
-
         L = len(self.data)
         H = self._hessian_minibatch(theta, 0)
 
@@ -816,30 +755,13 @@ class LNLN(NeuralEncodingModel):
         hess_factor = r / (rhat**2)
 
         # nonlinearity projection
-        zproj = np.sum(
-            theta['f'][
-                :,
-                np.newaxis,
-                :] *
-            zgrad,
-            axis=2)            # M by T
-        zproj2 = np.sum(
-            theta['f'][
-                :,
-                np.newaxis,
-                :] * zhess,
-            axis=2)           # M by T
+        zproj = np.sum(theta['f'][:, np.newaxis, :] * zgrad, axis=2)                    # M by T
+        zproj2 = np.sum(theta['f'][:, np.newaxis, :] * zhess, axis=2)                   # M by T
 
         # vectorized data
-        x_vec = np.rollaxis(
-            self.data[data_index]['stim'], -1).reshape(N, T)      # N x T
-        # M*P x T
-        z_vec = np.rollaxis(z, -1).reshape(M * P, T)
-        scale_factor = np.diag(
-            grad_factor *
-            dr2dz2 +
-            hess_factor *
-            drdz**2)    # diagonal(T)
+        x_vec = np.rollaxis(self.data[data_index]['stim'], -1).reshape(N, T)    # N x T
+        z_vec = np.rollaxis(z, -1).reshape(M * P, T)                              # M*P x T
+        scale_factor = np.diag(grad_factor * dr2dz2 + hess_factor * drdz**2)          # diagonal(T)
 
         # nonlinearity - nonlinearity portion
         H[-(M * P):, -(M * P):] = z_vec.dot(scale_factor.dot(z_vec.T))
@@ -867,15 +789,7 @@ class LNLN(NeuralEncodingModel):
 
                 # diagonal term (for the same subunit)
                 if j1 == j2:
-                    H[j1 *
-                      N:(j1 +
-                         1) *
-                        N, j2 *
-                        N:(j2 +
-                           1) *
-                        N] += x_vec.dot(np.diag(grad_factor *
-                                                drdz *
-                                                zhess_j1).dot(x_vec.T))
+                    H[j1 * N:(j1 + 1) * N, j2 * N:(j2 + 1) * N] += x_vec.dot(np.diag(grad_factor * drdz * zhess_j1).dot(x_vec.T))
 
         return H / float(T)
 
@@ -907,10 +821,7 @@ class LNLN(NeuralEncodingModel):
 
         # compute log(rate) and the firing rate
         r, drdz, dr2dz2 = self.final_nonlin_function(
-            np.tensordot(
-                theta['f'], z, ([
-                    0, 1], [
-                    0, 2])))  # dims: (M)
+            np.tensordot(theta['f'], z, ([0, 1], [0, 2])))  # dims: (M)
 
         return u, z, zgrad, zhess, drdz, dr2dz2, r
 

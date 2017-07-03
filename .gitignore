@@ -31,5 +31,6 @@ htmlcov/
 nosetests.xml
 coverage.xml
 
-# PyCharm
 .idea/
+tags
+.mypy_cache
