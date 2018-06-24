@@ -4,13 +4,11 @@ Tools for visualizing models
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
-# import palettable
 from scipy.stats import skew
-from toolz import compose, curry
-
-import pyret.filtertools as ft
-import pyret.visualizations as viz
 from jetpack import img
+import pyret.visualizations as viz
+from toolz import compose, curry
+import pyret.filtertools as ft
 
 
 def contour(W, n=3, **kwargs):

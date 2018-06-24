@@ -1,5 +1,6 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+*.pyc
 
 # Distribution / packaging
 .Python
@@ -30,5 +31,6 @@ htmlcov/
 nosetests.xml
 coverage.xml
 
+.idea/
 tags
 .mypy_cache

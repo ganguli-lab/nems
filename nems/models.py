@@ -1,5 +1,5 @@
 """
-Objects for fitting and testing Neural Encoding Models
+Objects for fitting and testing Neural Encoding models
 
 This module provides objects useful for fitting neural encoding models (nems).
 Nems are typically probabilistic models of the response of a sensory neuron to
@@ -29,9 +29,9 @@ from time import strftime
 # third party packages
 import h5py
 import numpy as np
+import tableprint as tp
 from sklearn.model_selection import KFold
 
-import tableprint
 from proxalgs import Optimizer, operators
 from tqdm import tqdm
 
@@ -104,7 +104,7 @@ class NeuralEncodingModel(object):
 
         # store stimulus and rate data for each minibatch in a list
         self.data = list()
-        for idx in range(num_minibatches):
+        for idx in tqdm(range(num_minibatches)):
 
             # indices for this minibatch
             minibatch_indices = slice(
@@ -263,7 +263,7 @@ class NeuralEncodingModel(object):
         headers = ['Set'] + list(map(str.upper, metrics.Score._fields))
 
         # print the table
-        tableprint.table(data, headers, width=10, format_spec='3g')
+        tp.table(data, headers, width=10, format_spec='3g')
 
         return results
 
@@ -549,6 +549,16 @@ class LNLN(NeuralEncodingModel):
         elif param_gradient == 'f':
             obj_gradient = np.tensordot(grad_factor, z, ([0], [1])) / float(m)
 
+        elif param_gradient == 'both':
+            nonlin_proj = np.sum(
+                f[:, np.newaxis, :] * zgrad, axis=2)   # dims: (K, M)
+            weighted_proj = grad_factor[
+                np.newaxis,
+                :] * nonlin_proj  # dims: (K, M)
+            dW = np.tensordot(weighted_proj, data['stim'], ([1], [1])) / float(m)
+            df = np.tensordot(grad_factor, z, ([0], [1])) / float(m)
+            obj_gradient = {'W': dW, 'f': df}
+
         else:
             obj_gradient = None
 
@@ -600,7 +610,6 @@ class LNLN(NeuralEncodingModel):
         -----
         See the `proxalgs` module for more information on the optimization algorithm
         """
-
         # grab the initial parameters
         theta_current = {
             'W': self.theta_init['W'].copy(),
@@ -653,13 +662,13 @@ class LNLN(NeuralEncodingModel):
                 disp=disp,
                 callback=callback)
             t1 = perf_counter() - t0
-            print('Finished optimizing ' + param_key + '. Elapsed time: ' + tableprint.humantime(t1))
+            print('Finished optimizing ' + param_key + '. Elapsed time: ' + tp.humantime(t1))
 
             return opt.theta
 
         # print results based on the initial parameters
         print('\n')
-        tableprint.banner('Initial parameters')
+        tp.banner('Initial parameters')
         update_results()
 
         try:
@@ -670,7 +679,7 @@ class LNLN(NeuralEncodingModel):
 
                 # Fit filters
                 print('\n')
-                tableprint.banner('Fitting filters')
+                tp.banner('Fitting filters')
 
                 # wrapper for the objective and gradient
                 def f_df_wrapper(W, d):
@@ -688,7 +697,7 @@ class LNLN(NeuralEncodingModel):
 
                 # Fit nonlinearity
                 print('\n')
-                tableprint.banner('Fitting nonlinearity')
+                tp.banner('Fitting nonlinearity')
 
                 # wrapper for the objective and gradient
                 def f_df_wrapper(f, d):
@@ -780,7 +789,7 @@ class LNLN(NeuralEncodingModel):
 
                 # diagonal term (for the same subunit)
                 if j1 == j2:
-                    H[j1*N:(j1 + 1)*N, j2*N:(j2 + 1)*N] += x_vec.dot(np.diag(grad_factor * drdz * zhess_j1).dot(x_vec.T))
+                    H[j1 * N:(j1 + 1) * N, j2 * N:(j2 + 1) * N] += x_vec.dot(np.diag(grad_factor * drdz * zhess_j1).dot(x_vec.T))
 
         return H / float(T)
 
@@ -818,17 +827,14 @@ class LNLN(NeuralEncodingModel):
 
     def predict(self, theta):
         """Generates the subunit activations and model firing rates"""
-
         rhat = list()
-        projections = list()
         subunits = list()
         rates = list()
         for d in tqdm(self.data):
-            u, z, _, _, _, _, rate = self.rate(theta, d['stim'])
+            _, z, _, _, _, _, rate = self.rate(theta, d['stim'])
             subunit = np.einsum('ijk,ik->ij', z, theta['f'])
             subunits.append(subunit)
-            projections.append(u)
             rates.append(d['rate'])
             rhat.append(rate)
 
-        return np.hstack(projections), np.hstack(subunits), np.hstack(rhat), np.hstack(rates)
+        return np.hstack(subunits), np.hstack(rhat), np.hstack(rates)
