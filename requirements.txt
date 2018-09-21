@@ -2,3 +2,7 @@ scipy
 numpy
 pandas
 tableprint
+h5py
+sklearn
+proxalgs
+tqdm
