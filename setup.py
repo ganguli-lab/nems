@@ -1,7 +1,6 @@
-import os
 from setuptools import setup, find_packages
 
-version = '0.2.1'
+version = '0.3.0'
 
 install_requires = [i.strip() for i in open("requirements.txt").readlines()]
 tests_require = ['nose']
@@ -20,4 +19,4 @@ setup(name='nems',
           'Operating System :: MacOS :: MacOS X',
           'Topic :: Scientific/Engineering :: Information Analysis'],
       packages=find_packages(),
-)
+      )
