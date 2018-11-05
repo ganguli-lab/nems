@@ -55,7 +55,7 @@ class Nonlinearity:
         Estimate parameters (using a least squares fit) to approximate f(x) = y
         """
         Phi = self(x)[0]
-        return np.linalg.lstsq(Phi, y)[0]
+        return np.linalg.lstsq(Phi, y, rcond=-1)[0]
 
     def plot(self, weights, ax=None, num_samples=1000, color='black'):
         """
