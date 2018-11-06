@@ -267,8 +267,8 @@ class NeuralEncodingModel(object):
 
         return results
 
-    def plot(self):
-        visualization.plot(self)
+    def plot(self, axis=0):
+        visualization.plot(self, axis=axis)
 
     def kfold(self, nfolds, *args, **kwargs):
         kf = KFold(len(self.data), n_folds=nfolds, shuffle=True)
